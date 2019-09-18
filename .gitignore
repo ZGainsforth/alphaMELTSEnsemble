@@ -1,6 +1,7 @@
 # Ignore vim files.
 tags
 Session.vim
+*.swp
 
 # Ignore mac files.
 .DS_Store
