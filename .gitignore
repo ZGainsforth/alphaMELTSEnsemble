@@ -1,0 +1,11 @@
+# Ignore vim files.
+tags
+Session.vim
+
+# Ignore mac files.
+.DS_Store
+
+# Ignore files used while running
+ComputeScratchSpace/
+alphamelts
+macosx_alphamelts*/
