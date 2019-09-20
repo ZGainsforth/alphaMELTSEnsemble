@@ -7,9 +7,10 @@ import sys, os
 import shutil
 import tempfile
 from collections import OrderedDict
-import json
 from pathlib import Path
-import yaml
+import deepdish as dd
+import itertools
+import pandas as pd
 
 def AddMELTSLine(MELTSStr, key, val):
     if key == 'fO2':
@@ -28,33 +29,44 @@ def AddMELTSLine(MELTSStr, key, val):
         MELTSStr += f'Initial Trace: {key} {val}\n'
     return MELTSStr
 
+def CreateNameOfCalculation(DataRow):#, Title):
+    NameStr = ''
+    for i in DataRow.index:
+        if i != 'DirName':
+            NameStr += f'_{i}={DataRow[i]}'
+    return NameStr
+
 def GenerateMeltsEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
                             ConstantInputs, ParameterizedInputs):
     # Make a string which will be used to create a bash script that will process all the MELTS calculations.
     RunAllStr = ''
 
-    # We make a mesh of the parameterized values -- this is an n-dimensional grid of all the variable calculation values.
-    X = np.meshgrid([x for x in ParameterizedInputs.values()])
+    # Make a product space of all the parameterized values.  We will have a pandas frame with
+    # one row for each calculation.
+    # Make a list of all the numpy arrays with just the numbers.  It's an ordered dict, so we can still
+    # Match the keys up later.
+    assert (type(ParameterizedInputs) is OrderedDict), 'ParamaterizedInput must be of type collections.OrderedDict.'
+    ParameterValues = []
+    for key, val in ParameterizedInputs.items():
+        ParameterValues.append(val)
+    ProductSpace = list(itertools.product(*ParameterValues))
+    # Make a dataframe with the values..
+    ParameterGrid = pd.DataFrame(np.array(ProductSpace), columns=ParameterizedInputs.keys())
+
+    # Now Compute a directory name for each calculation and add that to the dataframe.
+    ParameterGrid['DirName'] = ConstantInputs['Title']
+    for i in range(ParameterGrid.shape[0]):
+        ParameterGrid.at[i,'DirName'] = ParameterGrid.iloc[i]['DirName'] + CreateNameOfCalculation(ParameterGrid.iloc[i])
 
     # Report to the user how beefy this calculation will be.
-    TotalCalculations = 0
-    for x in X:
-        TotalCalculations += np.prod(x.shape)
-    print(f'Total number of alphaMELTS calculations will be: {TotalCalculations}')
-
-    # Flatten out the fancy n-dimensional space so we can do this in a single loop.
-    Y = [x.ravel() for x in X]
-
-    # Then we make a dictionary like ParameterizedInputs so we can look up values based on elements.
-    ParameterizedInputsMeshed = OrderedDict()
-    for i, (key, val) in enumerate(ParameterizedInputs.items()):
-        ParameterizedInputsMeshed[key] = Y[i]
+    print(f'Total number of alphaMELTS calculations will be: {ParameterGrid.shape[0]}')
 
     # This will be a shell script to run all the simulations.
     RunAll = ''
 
     # Now we build a file for each parameterized combination.
-    for i in range(TotalCalculations):
+    for index, row in ParameterGrid.iterrows():
+
         # Make a name for this MELTS computation.
         NameStr = ConstantInputs['Title']
 
@@ -64,17 +76,16 @@ def GenerateMeltsEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
         MELTSStr += f'Title: {ConstantInputs["Title"]}\n'
     
         # For the parameterized inputs, we go through the list and pull out the current index that we're working on.
-        for key,arr in ParameterizedInputsMeshed.items():
-            val = arr[i]
-            MELTSStr = AddMELTSLine(MELTSStr, key, val)
-            NameStr += f'_{key}={val}'
+        for param in row.index:
+            if param != 'DirName':
+                MELTSStr = AddMELTSLine(MELTSStr, param, row[param])
 
         # For the constant inputs, we just dump them into the file.
         for key,val in ConstantInputs.items():
             MELTSStr = AddMELTSLine(MELTSStr, key, val)
 
         # Now create a directory for this computation.
-        ComputeDir = os.path.join(ComputeScratchSpace, NameStr)
+        ComputeDir = os.path.join(ComputeScratchSpace, row['DirName'])
         if not os.path.exists(ComputeDir):
             os.makedirs(ComputeDir)
 
@@ -90,10 +101,14 @@ def GenerateMeltsEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
         RunAll += 'cd "' + ComputeDir + '" && '
         RunAll += os.path.join(alphaMELTSLocation, 'run_alphamelts.command') + ' -f alphamelts_settings.txt -b mybatch\n'
 
-    # Put a json file down which records our parameter space.
-    with open(os.path.join(ComputeScratchSpace, 'ParameterizedInputs.json'), 'w') as f:
-        # json.dumps(ParameterizedInputs, f)
-        yaml.dump(ParameterizedInputs, f)
+    # Store the parameterized space to disk so we can reassemble the ensemble later.
+    dd.io.save(os.path.join(ComputeScratchSpace, 'ConstantInputs.hdf5'), ConstantInputs)
+
+    # Store the parameterized space to disk so we can reassemble the ensemble later.
+    dd.io.save(os.path.join(ComputeScratchSpace, 'ParameterizedInputs.hdf5'), ParameterizedInputs)
+
+    # Store the parameterized space to disk so we can reassemble the ensemble later.
+    ParameterGrid.to_csv(os.path.join(ComputeScratchSpace, 'ParameterGrid.csv'))
 
     # Write out the Runall File.
     with open(os.path.join(ComputeScratchSpace, 'runall.sh'), 'w') as f:
@@ -134,7 +149,8 @@ if __name__ == "__main__":
     # Set up the inputs to the simulation that vary.
     ParameterizedInputs = OrderedDict()
     # Set the fugacity.  Because this is a set of values, a new MELTS simulation will be created for each value.
-    ParameterizedInputs['fO2'] = np.arange(-7, 0, 0.25)
+    ParameterizedInputs['fO2'] = np.arange(-6, 0, 0.25)
+    ParameterizedInputs['Na20'] = np.arange(0.00, 5.00, 1)
     
     GenerateMeltsEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
                             ConstantInputs, ParameterizedInputs)

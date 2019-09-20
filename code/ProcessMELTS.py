@@ -1,6 +1,8 @@
 import platform
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import use
+use('AGG')
 import pandas as pd
 import re
 from pprint import pprint
@@ -42,111 +44,80 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
     else:
         print ('Error!  No phase masses section in %s. Skipping.' % FileName)
 
+    # Put all the phases into a dictionary for easy access
+    PhasesData = dict()
+
     ### Olivine
-    OlivineData = ExtractAndPlotOnePhase(data, 'Olivine', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Olivine'] = ExtractAndPlotOnePhase(data, 'Olivine', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
     ### Spinel
-    SpinelData = ExtractAndPlotOnePhase(data, 'Spinel', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Spinel'] = ExtractAndPlotOnePhase(data, 'Spinel', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
     ### Liquid (Glass)
-    GlassData = ExtractAndPlotOnePhase(data, 'Liquid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Liquid'] = ExtractAndPlotOnePhase(data, 'Liquid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
     ### Orthopyroxene
-    OrthopyroxeneData = ExtractAndPlotOnePhase(data, 'Orthopyroxene', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Orthopyroxene'] = ExtractAndPlotOnePhase(data, 'Orthopyroxene', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
     ### Clinopyroxene
-    ClinopyroxeneData = ExtractAndPlotOnePhase(data, 'Clinopyroxene', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Clinopyroxene'] = ExtractAndPlotOnePhase(data, 'Clinopyroxene', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
     ### Alloy-Solid (metal)
-    AlloySolidData = ExtractAndPlotOnePhase(data, 'Alloy-Solid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Alloy-Solid'] = ExtractAndPlotOnePhase(data, 'Alloy-Solid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
     ### Alloy-Liquid (metal)
-    AlloyLiquidData = ExtractAndPlotOnePhase(data, 'Alloy-Liquid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+    PhasesData['Alloy-Liquid'] = ExtractAndPlotOnePhase(data, 'Alloy-Liquid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
-    # ### CPX
-    # # Get the clinopyroxene chunk of text.
-    # header = 'clinopyroxene_0 thermodynamic data and composition:'
-    # CPXData = GetalphaMELTSSection(data, header)
-    # # Check if this MELTS computation includes this phase.
-    # if CPXData is not None:
-    #     # Plot the CPX.
-    #     CPXT, CPXFitIndex = PlotCPX(CPXData, DirName)
-    #     # Save the fitindex stuff
-    #     SaveFitIndex(DirName, CPXFitIndex, CPXT, 'CPX')
-    # else:
-    #     # If not, note that this mineral is not here.
-    #     CPXT = CPXFitIndex = None
+    # Make a combined Fit index.
+    # CombinedFitAxis and index will be the interesection of all phases.
+    CombinedFitAxis = None # The x-axis for plotting the fit index.  Usually temperature.
+    CombinedFitIndex = None # The fit index for all phases.
+    TotalDOF = 0
+    for key, val in TargetCompositions.items():
+        print(f'Adding {len(val)} DOFs for {key} to aggregate fit index.')
+        TempFitAxis = PhasesData[key]['Temperature']
+        TempFitIndex = PhasesData[key]['FitIndex']
+        if CombinedFitIndex is None:
+            # If this is the first phase, then there is nothing to combine yet.
+            CombinedFitAxis = TempFitAxis 
+            CombinedFitIndex = TempFitIndex * len(val)
+            TotalDOF += len(val)
+        else:
+            # Be sure to re-multiply by the number of DOF.
+            TempFitIndex *= len(val)
+            TotalDOF += len(val)
+            # Check if any temps in our combined axis are not included in this Temp axs.
+            Mask = np.isin(CombinedFitAxis, TempFitAxis)
+            # If so, trim those values.
+            CombinedFitAxis = CombinedFitAxis[Mask]
+            CombinedFitIndex = CombinedFitIndex[Mask]
+            # And do it the other way around
+            Mask = np.isin(TempFitAxis, CombinedFitAxis)
+            TempFitAxis = TempFitAxis[Mask]
+            TempFitIndex = TempFitIndex[Mask]
+            # Finally, we get to add the FitIndexes together.
+            CombinedFitIndex += TempFitIndex
 
-    # ### Feldspar
-    # # Get the feldspar chunk of text.
-    # header = 'feldspar_0 thermodynamic data and composition:'
-    # FeldsparData = GetalphaMELTSSection(data, header)
-    # # Check if this MELTS computation includes this phase.
-    # if FeldsparData is not None:
-    #     # Plot the Feldspar.
-    #     FeldsparT, FeldsparFitIndex = PlotFeldspar(FeldsparData, DirName)
-    #     # Save the fitindex stuff
-    #     SaveFitIndex(DirName, FeldsparFitIndex, FeldsparT, 'Feldspar')
-    # else:
-    #     # If not, note that this mineral is not here.
-    #     FeldsparT = FeldsparFitIndex = None
+    # After combining the fit indices, we need to divide by the total DOF.
+    CombinedFitIndex /= TotalDOF
 
-    # ### Nepheline
-    # # Get the nepheline chunk of text.
-    # header = 'nepheline_0 thermodynamic data and composition:'
-    # NephelineData = GetalphaMELTSSection(data, header)
-    # # Check if this MELTS computation includes this phase.
-    # if NephelineData is not None:
-    #     # Plot the Nepheline.
-    #     NephelineT, NephelineFitIndex = PlotNepheline(NephelineData, DirName)
-    #     # Save the fitindex stuff
-    #     SaveFitIndex(DirName, NephelineFitIndex, NephelineT, 'Nepheline')
-    # else:
-    #     # If not, note that this mineral is not here.
-    #     NephelineT = NephelineFitIndex = None
+    # print(CombinedFitAxis[:,np.newaxis].T)
+    # print(CombinedFitIndex[:,np.newaxis].T)
+    # print(TotalDOF)
 
-    # ### Olivine and Spinel combined fit.
-    # if OlivineFitIndex is not None and SpinelFitIndex is not None:
-    #     # Before making the combined fit index, make sure the temperature ranges are the same.
-    #     OlivineT, OlivineFitIndex, SpinelT, SpinelFitIndex = Marry2ColumnDomains(OlivineT, OlivineFitIndex, SpinelT, SpinelFitIndex)
-    #     # Now compute the olivine and spinel fit index.
-    #     FitIndex = (OlivineFitIndex + SpinelFitIndex) / 2
-    #     SaveFitIndex(DirName, FitIndex, OlivineT, 'Olivine + Spinel Fit Index')
+    # Save the ensemble fit index as a csv.
+    FitIndex = pd.DataFrame({'Temperature':CombinedFitAxis, 'FitIndex':CombinedFitIndex})
+    FitIndex.to_csv(os.path.join(DirName, 'Output_CombinedFitIndex.csv'))
 
-    #     figure()
-    #     clf()
-    #     plot(OlivineT, OlivineFitIndex, SpinelT, SpinelFitIndex, OlivineT, FitIndex)
-    #     legend(['Olivine', 'Spinel', 'Olivine + Spinel'])
-    #     gca().invert_xaxis()
-    #     xlabel('Temperature ($^{\circ}$C)')
-    #     ylabel('Fit index')
-    #     title('Olivine + spinel fit index')
-    #     mysavefig(os.path.join(DirName, 'Olivine + Spinel Fit Index.png'))
-
-   # ### Olivine and Spinel and Feldspar combined fit.
-    # if OlivineFitIndex is not None and SpinelFitIndex is not None and FeldsparFitIndex is not None:
-    #     # Before making the combined fit index, make sure the temperature ranges are the same.
-    #     OlivineT, OlivineFitIndex, SpinelT, SpinelFitIndex = Marry2ColumnDomains(OlivineT, OlivineFitIndex, SpinelT, SpinelFitIndex)
-    #     # Before making the combined fit index, make sure the temperature ranges are the same.
-    #     OlivineT, OlivineFitIndex, FeldsparT, FeldsparFitIndex = Marry2ColumnDomains(OlivineT, OlivineFitIndex, FeldsparT, FeldsparFitIndex)
-    #     # Before making the combined fit index, make sure the temperature ranges are the same.
-    #     SpinelT, SpinelFitIndex, FeldsparT, FeldsparFitIndex = Marry2ColumnDomains(SpinelT, SpinelFitIndex, FeldsparT, FeldsparFitIndex)
-    #     # Now compute the olivine and spinel fit index.
-    #     FitIndex = (OlivineFitIndex + SpinelFitIndex + FeldsparFitIndex)/3
-    #     SaveFitIndex(DirName, FitIndex, OlivineT, 'Olivine + Spinel + Feldspar Fit Index')
-
-    #     figure()
-    #     clf()
-    #     plot(OlivineT, OlivineFitIndex, SpinelT, SpinelFitIndex, FeldsparT, FeldsparFitIndex, OlivineT, FitIndex)
-    #     legend(['Olivine', 'Spinel', 'Feldspar', 'Olivine + Spinel'])
-    #     gca().invert_xaxis()
-    #     xlabel('Temperature ($^{\circ}$C)')
-    #     ylabel('Fit index')
-    #     title('Olivine + spinel + feldspar fit index')
-    #     mysavefig(os.path.join(DirName, 'Olivine + Spinel + Feldspar Fit Index.png'))
-
-    #print ('Finished %s' % DirName)
-
+    # Save the Combined Fit index to a plot.
+    plt.figure()
+    plt.plot(FitIndex['Temperature'], FitIndex['FitIndex'])
+    plt.xlabel('Temperature')
+    plt.ylabel('Fit index')
+    plt.title('Combined Fit index with {} DOFs'.format(TotalDOF))
+    plt.tight_layout()
+    mysavefig(os.path.join(DirName, 'Output_CombinedFitIndex.png'))
+    
 def mysavefig(filename):
     if enable_plotting:
         filename = filename.replace('png', 'pdf')
@@ -1099,50 +1070,39 @@ def PlotCPX(CPXData, DirName):
 
     # return T, FitIndex
 
-# def SaveFitIndex(DirName, FitIndex, T, MineralName):
-
-#     # If there is no FitIndex for this phase then return.
-#     if FitIndex is not None:
-#         return
-
-#     # Write the fit index to a csv file so we can manipulate it later.
-#     savetxt(os.path.join(DirName, MineralName + 'FitIndex.csv'), vstack((T, FitIndex)).T, delimiter=',')
-#     with open(os.path.join(DirName, MineralName + 'BestFit.txt'), 'w') as FitFile:
-#         FitFile.write('FitIndex,%g\n' % min(FitIndex))
-#         FitFile.write('T,%g\n' % T[argmin(FitIndex)])
-
-#def Marry2ColumnDomains(x1, y1, x2, y2):
-#    #Based on: http://stackoverflow.com/questions/24317761/numpy-function-to-find-indices-for-overlapping-vectors?noredirect=1#comment37587212_24317761
-#    mask1 = np.in1d(x1, x2)
-#    mask2 = np.in1d(x2, x1)
-#    xx1 = x1[mask1]
-#    yy1 = y1[mask1]
-#    xx2 = x2[mask2]
-#    yy2 = y2[mask2]
-
-#    return xx1, yy1, xx2, yy2
-
-# def AddColumnToMineralData(Column, MineralData, ColumnName, ColumnNames):
-#     # Add the new column on the side.
-#     MineralData = column_stack((MineralData, Column))
-#     # Append the column name to the list of column names.
-#     ColumnNames = append(ColumnNames, ColumnName)
-#     # Get the index of it
-#     Column = shape(MineralData)[1] - 1
-#     return Column, MineralData, ColumnNames
-
 if __name__ == '__main__':
     # print(platform.python_version())
+    # print(os.system("which python"))
+    # print(os.system("pwd"))
 
-    DirName = 'ComputeScratchSpace/VaryfO2_fO2=-3.5'
 
     # Create a dictionary for each phase that we want to include in a fit index.
     # Each phase has a dictionary for all the oxides to include.
     TargetCompositions = dict()
     TargetCompositions['Olivine'] = {'SiO2':41.626, 'MgO':48.536, 'FeO':7.849}#, 'MnO':1.494, 'CaO':0.101, 'Cr2O3':0.394}
     TargetCompositions['Orthopyroxene'] = {'SiO2':54.437, 'MgO':31.335, 'FeO':4.724}
-    TargetCompositions['Clinopyroxene'] = {'SiO2':54.437, 'MgO':31.335, 'FeO':4.724}
-    TargetCompositions['Alloy-Solid'] = {'Fe':91.428, 'Ni':8.572}
+    # TargetCompositions['Alloy-Liquid'] = {'Fe':91.428, 'Ni':8.572}
+    TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
     
-    ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
+    ProcessOneDirectory = False
+    if ProcessOneDirectory:
+        # Do a computation on a single directory
+        DirName = 'ComputeScratchSpace/VaryfO2_fO2=-3.5'
+        ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
+    else:
+        # Or in parallel on an entire ensemble.
+        from glob2 import glob
+        # from dask import delayed, compute
+        import dask
+        dask.config.set(scheduler='processes')
+        # dask.config.set(scheduler='synchronous')
 
+        ThisDir = os.path.dirname(os.path.abspath(__file__))
+        Dirs = glob(os.path.join(ThisDir, '../ComputeScratchSpace/*/'))
+
+        @dask.delayed
+        def DoOneDir(DirName):
+            print('Dask for {}'.format(DirName))
+            ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
+        Computes = [DoOneDir(Dir) for Dir in Dirs]
+        dask.compute(Computes)
