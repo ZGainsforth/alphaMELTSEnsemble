@@ -10,12 +10,18 @@ from CombineMELTSEnsemble import ReadInAllOutputs, Make2DCrossSection, Plot2DCro
 
 if __name__ == "__main__":
     print('------------------------------ START ------------------------------')
+    # Only needs to be done if changing bulk composition or initial conditions/parameterization.
+    DoMELTSSims = False
+    # Only needs to be run if we changed the fitindex properties or something like that.
+    DoAnalysis = True
+    # We should replot.
+    DoPlotting = True
 
     # Set up directory structure
     # Location to the alphamelts executable.
-    alphaMELTSLocation = os.path.join(os.getcwd(), 'alphamelts')
+    alphaMELTSLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'alphamelts')
     # Location to where to put the compute files.
-    ComputeScratchSpace = os.path.join(os.getcwd(), 'ComputeScratchSpace')
+    ComputeScratchSpace = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ComputeScratchSpace2')
 
     # Constant inputs
     ConstantInputs = dict()
@@ -43,7 +49,7 @@ if __name__ == "__main__":
     
     print('------------------------------ MELTS SIMULATIONS --------------------------')
 
-    if False:
+    if DoMELTSSims:
         # Create MELTS simulations
         GenerateMELTSEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
                                 ConstantInputs, ParameterizedInputs)
@@ -53,7 +59,7 @@ if __name__ == "__main__":
 
     print('------------------------------ ANALYZE MELTS SIMULATIONS ---------------------------')
 
-    if True:
+    if DoAnalysis:
         # Create a dictionary for each phase that we want to include in a fit index.
         # Each phase has a dictionary for all the oxides to include.
         TargetCompositions = dict()
@@ -76,7 +82,8 @@ if __name__ == "__main__":
             # dask.config.set(scheduler='synchronous')
 
             ThisDir = os.path.dirname(os.path.abspath(__file__))
-            Dirs = glob(os.path.join(ThisDir, '../ComputeScratchSpace/*/'))
+            # Dirs = glob(os.path.join(ThisDir, '../ComputeScratchSpace/*/'))
+            Dirs = glob(ComputeScratchSpace + '/*/')
 
             @dask.delayed
             def DoOneDir(DirName):
@@ -87,7 +94,7 @@ if __name__ == "__main__":
 
     print('------------------------------ PLOT MELTS SIMULATIONS ------------------------------')
 
-    if True:
+    if DoPlotting:
         import matplotlib
         matplotlib.use('Qt5Agg',warn=False, force=True)
         from matplotlib import pyplot as plt

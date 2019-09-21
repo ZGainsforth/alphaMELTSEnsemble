@@ -7,7 +7,7 @@ Session.vim
 .DS_Store
 
 # Ignore files used while running
-ComputeScratchSpace/
+ComputeScratchSpace*/
 alphamelts
 macosx_alphamelts*/
 
