@@ -3,6 +3,7 @@
 # The purpose of this file is to take inputs and generate a bunch of MELTS calculations
 # to explore some parameter space (we'll call it an ensemble here).
 import numpy as np
+import matplotlib.pyplot as plt
 import sys, os
 import shutil
 import tempfile
@@ -80,7 +81,59 @@ def ReadInAllOutputs(ComputeScratchSpace, DataGrid):
 
     return DataGrid
 
+def ExtractIndependentAxis(DataGrid, AxisPath):
+    if '/' in AxisPath:
+        Axis = ExtractMELTSIndependentAxis(DataGrid, AxisPath)
+    else:
+        Axis = DataGrid[AxisPath].to_numpy()
+    return Axis
 
+def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
+    Path = AxisPath.split('/')
+    # Find out the range of temperatures across all the values of fO2.
+    Axis = None
+    for i in range(DataGrid.shape[0]):
+        T = np.array(DataGrid.iloc[i][Path[0]][Path[1]][Path[2]])
+        # T = np.array(DataGrid.iloc[i]['MELTS']['Olivine']['Temperature'])
+        if Axis is None:
+            Axis = T
+        else:
+            Axis = np.union1d(Axis,T)
+    # print(Axis[:,np.newaxis].T)
+    # print(len(Axis))
+    return Axis
+
+def IndexByPath(Prefix, Path):
+    PathStr = ''.join(["['"+s+"']" for s in Path.split("/")])
+    return f'{Prefix}{PathStr}'
+
+def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath):
+    XAxis = ExtractIndependentAxis(DataGrid, XAxisPath)
+    YAxis = ExtractIndependentAxis(DataGrid, YAxisPath)
+    CrossSec = np.zeros((len(XAxis), len(YAxis)))
+    # print(CrossSec.shape)
+    for i in range(DataGrid.shape[0]):
+        Xval = DataGrid.iloc[i][XAxisPath]
+        # print('Xval=',Xval)
+        Xidx = np.where(XAxis == Xval)[0][0]
+        # print('Xidx=', Xidx)
+        YAxisPathParts = YAxisPath.split('/')
+        Yvals = np.array(DataGrid.iloc[i][YAxisPathParts[0]][YAxisPathParts[1]][YAxisPathParts[2]])
+        DependentPathParts = DependentPath.split('/')
+        DependentVals = np.array(DataGrid.iloc[i][DependentPathParts[0]][DependentPathParts[1]][DependentPathParts[2]])
+        # print(DependentVals)
+        for j, y in enumerate(Yvals):
+            Yidx = np.where(Yvals == y)[0][0]
+            CrossSec[Xidx, Yidx] = DependentVals[j]
+    return XAxis, YAxis, CrossSec
+
+def Plot2DCrossSection(CrossSec, XAxis, YAxis, XAxisLabel=None, YAxisLabel=None, Title=None):
+    plt.imshow(np.fliplr(CrossSec), origin='lower', extent=[XAxis[0], XAxis[-1], YAxis[0], YAxis[-1]], aspect='auto')
+    plt.colorbar()
+    plt.xlabel(XAxisLabel)
+    plt.ylabel(YAxisLabel)
+    plt.title(Title)
+    
 if __name__ == "__main__":
     print('------------------------------ START ------------------------------')
 
@@ -96,12 +149,36 @@ if __name__ == "__main__":
     print(ParameterizedInputs)
 
     # Load the parameterized space to disk so we can reassemble the ensemble.
-    DataGrid = pd.read_csv(os.path.join(ComputeScratchSpace, 'ParameterGrid.csv'))
+    DataGrid = pd.read_csv(os.path.join(ComputeScratchSpace, 'ParameterGrid.csv'), index_col=0)
 
     DataGrid = ReadInAllOutputs(ComputeScratchSpace, DataGrid)
     # print(DataGrid.iloc[0]['MELTS'])
 
-    print(deep_getsizeof(DataGrid, set()))
+    # Constraints = {'Na2O': 0.0}
+    # IndependentVariable = {'fO2': 'fO2'}
+    # DependentVariable = {'FitIndex': 'MELTS/Olivine/FitIndex'}
+    # PlotTandfO2vsDependent(DataGrid, Constraints, DependentVariable)
+
+    # print(DataGrid.columns)
+    # print(len(DataGrid.columns))
+    # print(DataGrid.iloc[0]['MELTS'].keys())
+    # print(DataGrid.iloc[0]['MELTS']['Olivine'].keys())
+
+    # TempAxis = ExtractIndependentAxis(DataGrid, 'MELTS/Olivine/Temperature')
+    # fO2Axis = ExtractIndependentAxis(DataGrid, 'fO2')
+
+    # fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Olivine/Temperature', 'MELTS/Olivine/FitIndex')
+    fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Orthopyroxene/Temperature', 'MELTS/Orthopyroxene/FitIndex')
+    # fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Liquid/Temperature', 'MELTS/Liquid/FitIndex')
+    # fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/CombinedFitIndex/Temperature', 'MELTS/CombinedFitIndex/FitIndex')
+    CrossSec[CrossSec==0] = np.NaN
+
+    plt.imshow(np.fliplr(CrossSec), origin='lower', extent=[TempAxis[0], TempAxis[-1], fO2Axis[0], fO2Axis[-1]], aspect='auto')
+    plt.colorbar()
+    plt.xlabel('Temperature $^{\circ}$C')
+    plt.ylabel('f$_{O_2}$')
+    plt.title('FitIndex Orthopyroxene')
+    plt.show()
 
     print('------------------------------ DONE ------------------------------')
 

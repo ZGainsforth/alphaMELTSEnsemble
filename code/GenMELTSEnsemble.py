@@ -36,7 +36,7 @@ def CreateNameOfCalculation(DataRow):#, Title):
             NameStr += f'_{i}={DataRow[i]}'
     return NameStr
 
-def GenerateMeltsEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
+def GenerateMELTSEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
                             ConstantInputs, ParameterizedInputs):
     # Make a string which will be used to create a bash script that will process all the MELTS calculations.
     RunAllStr = ''
@@ -150,9 +150,9 @@ if __name__ == "__main__":
     ParameterizedInputs = OrderedDict()
     # Set the fugacity.  Because this is a set of values, a new MELTS simulation will be created for each value.
     ParameterizedInputs['fO2'] = np.arange(-6, 0, 0.25)
-    ParameterizedInputs['Na20'] = np.arange(0.00, 5.00, 1)
+    # ParameterizedInputs['Na2O'] = np.arange(0.00, 5.00, 1)
     
-    GenerateMeltsEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
+    GenerateMELTSEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
                             ConstantInputs, ParameterizedInputs)
 
     print('------------------------------ DONE ------------------------------')

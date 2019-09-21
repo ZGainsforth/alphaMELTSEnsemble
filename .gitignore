@@ -10,3 +10,6 @@ Session.vim
 ComputeScratchSpace/
 alphamelts
 macosx_alphamelts*/
+
+# Ignore run stuff
+__pycache__
