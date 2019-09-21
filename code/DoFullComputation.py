@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # Only needs to be done if changing bulk composition or initial conditions/parameterization.
     DoMELTSSims = False
     # Only needs to be run if we changed the fitindex properties or something like that.
-    DoAnalysis = True
+    DoAnalysis = False
     # We should replot.
     DoPlotting = True
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     ConstantInputs['Title'] = 'VaryfO2'
     ConstantInputs['Buffer'] = 'IW'
     # Set the temperature.  Because this is a single value, there will only be an initial temperature entry made in the inputs melt file.
-    ConstantInputs['T'] = 1500 # Temperature
+    ConstantInputs['T'] = 2000 # Temperature
     ConstantInputs['P'] = 1 # Bar
     # And so for all the elements.
     ConstantInputs['SiO2'] = 44.10
@@ -46,7 +46,15 @@ if __name__ == "__main__":
     # Set the fugacity.  Because this is a set of values, a new MELTS simulation will be created for each value.
     ParameterizedInputs['fO2'] = np.arange(-6, 0, 0.25)
     # ParameterizedInputs['Na2O'] = np.arange(0.00, 5.00, 1)
-    
+
+    # Create a dictionary for each phase that we want to include in a fit index.
+    # Each phase has a dictionary for all the oxides to include.
+    TargetCompositions = dict()
+    TargetCompositions['Olivine'] = {'SiO2':41.626, 'MgO':48.536, 'FeO':7.849}#, 'MnO':1.494, 'CaO':0.101, 'Cr2O3':0.394}
+    TargetCompositions['Orthopyroxene'] = {'SiO2':54.437, 'MgO':31.335, 'FeO':4.724}
+    # TargetCompositions['Alloy-Liquid'] = {'Fe':91.428, 'Ni':8.572}
+    TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
+     
     print('------------------------------ MELTS SIMULATIONS --------------------------')
 
     if DoMELTSSims:
@@ -60,18 +68,10 @@ if __name__ == "__main__":
     print('------------------------------ ANALYZE MELTS SIMULATIONS ---------------------------')
 
     if DoAnalysis:
-        # Create a dictionary for each phase that we want to include in a fit index.
-        # Each phase has a dictionary for all the oxides to include.
-        TargetCompositions = dict()
-        TargetCompositions['Olivine'] = {'SiO2':41.626, 'MgO':48.536, 'FeO':7.849}#, 'MnO':1.494, 'CaO':0.101, 'Cr2O3':0.394}
-        TargetCompositions['Orthopyroxene'] = {'SiO2':54.437, 'MgO':31.335, 'FeO':4.724}
-        # TargetCompositions['Alloy-Liquid'] = {'Fe':91.428, 'Ni':8.572}
-        # TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
-        
         ProcessOneDirectory = False
         if ProcessOneDirectory:
             # Do a computation on a single directory
-            DirName = 'ComputeScratchSpace/VaryfO2_fO2=-3.5'
+            DirName = '../ComputeScratchSpace2/VaryfO2_fO2=-4.5'
             ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
         else:
             # Or in parallel on an entire ensemble.
@@ -121,10 +121,10 @@ if __name__ == "__main__":
         CrossSec[CrossSec==0] = np.NaN
         Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Orthopyroxene')
 
-        # plt.figure()
-        # fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Liquid/Temperature', 'MELTS/Liquid/FitIndex')
-        # CrossSec[CrossSec==0] = np.NaN
-        # Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Glass')
+        plt.figure()
+        fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Liquid/Temperature', 'MELTS/Liquid/FitIndex')
+        CrossSec[CrossSec==0] = np.NaN
+        Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Glass')
 
         plt.figure()
         fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/CombinedFitIndex/Temperature', 'MELTS/CombinedFitIndex/FitIndex')

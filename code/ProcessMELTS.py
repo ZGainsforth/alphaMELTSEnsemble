@@ -75,8 +75,8 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
     TotalDOF = 0
     for key, val in TargetCompositions.items():
         print(f'Adding {len(val)} DOFs for {key} to aggregate fit index.')
-        TempFitAxis = PhasesData[key]['Temperature']
-        TempFitIndex = PhasesData[key]['FitIndex']
+        TempFitAxis = PhasesData[key]['Temperature'].to_numpy() # We have to treat this as numpy or the pandas indexes will get in the way.
+        TempFitIndex = PhasesData[key]['FitIndex'].to_numpy()
         if CombinedFitIndex is None:
             # If this is the first phase, then there is nothing to combine yet.
             CombinedFitAxis = TempFitAxis 
@@ -96,7 +96,9 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
             TempFitAxis = TempFitAxis[Mask]
             TempFitIndex = TempFitIndex[Mask]
             # Finally, we get to add the FitIndexes together.
+            # print(CombinedFitIndex[:, np.newaxis].T)
             CombinedFitIndex += TempFitIndex
+            # print(CombinedFitIndex[:, np.newaxis].T)
 
     # After combining the fit indices, we need to divide by the total DOF.
     CombinedFitIndex /= TotalDOF
@@ -1084,10 +1086,10 @@ if __name__ == '__main__':
     # TargetCompositions['Alloy-Liquid'] = {'Fe':91.428, 'Ni':8.572}
     TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
     
-    ProcessOneDirectory = False
+    ProcessOneDirectory = True
     if ProcessOneDirectory:
         # Do a computation on a single directory
-        DirName = 'ComputeScratchSpace/VaryfO2_fO2=-3.5'
+        DirName = '../ComputeScratchSpace2/VaryfO2_fO2=-4.5'
         ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
     else:
         # Or in parallel on an entire ensemble.

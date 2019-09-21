@@ -13,3 +13,6 @@ macosx_alphamelts*/
 
 # Ignore run stuff
 __pycache__
+
+# Ingore pycharm stuff
+.idea/*
