@@ -510,6 +510,11 @@ def PlotLiquid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
         FitIndex = ComputeFitIndex(Data, FitCompo)
         Data['FitIndex'] = FitIndex
 
+    # Compute an Mg#
+    MgTemp = Data['MgO']/40.3
+    FeTemp = Data['FeO']/71.85
+    Data['Mg#'] = MgTemp/(MgTemp+FeTemp)
+
     # Now output a csv to disk for future reference.
     Data.to_csv(os.path.join(DirName, 'Output_Liquid.csv'))
 
