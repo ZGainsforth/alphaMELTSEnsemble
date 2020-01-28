@@ -74,6 +74,9 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
     CombinedFitIndex = None # The fit index for all phases.
     TotalDOF = 0
     for key, val in TargetCompositions.items():
+        if (key not in PhasesData.keys()) or (PhasesData[key] is None):
+            print(f'Cannot add {key} to aggregate fit index since MELTS predicted the phase is not present here.')
+            continue
         print(f'Adding {len(val)} DOFs for {key} to aggregate fit index.')
         TempFitAxis = PhasesData[key]['Temperature'].to_numpy() # We have to treat this as numpy or the pandas indexes will get in the way.
         TempFitIndex = PhasesData[key]['FitIndex'].to_numpy()
@@ -1042,7 +1045,7 @@ if __name__ == '__main__':
     ProcessOneDirectory = True
     if ProcessOneDirectory:
         # Do a computation on a single directory
-        DirName = '../ComputeScratchSpace2/VaryfO2_fO2=-4.5'
+        DirName = '../ComputeScratchSpace/VaryfO2_fO2=-3.0'
         ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
     else:
         # Or in parallel on an entire ensemble.

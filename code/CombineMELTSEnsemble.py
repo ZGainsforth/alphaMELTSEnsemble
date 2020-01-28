@@ -134,12 +134,12 @@ def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath):
             DependentVals = np.zeros(len(Yvals))
         # print(DependentVals)
         for j, y in enumerate(Yvals):
-            Yidx = np.where(Yvals == y)[0][0]
+            Yidx = np.where(YAxis == y)[0][0]
             CrossSec[Xidx, Yidx] = DependentVals[j]
     return XAxis, YAxis, CrossSec
 
 def Plot2DCrossSection(CrossSec, XAxis, YAxis, XAxisLabel=None, YAxisLabel=None, Title=None):
-    plt.imshow(np.fliplr(CrossSec), origin='lower', extent=[XAxis[0], XAxis[-1], YAxis[0], YAxis[-1]], aspect='auto')
+    plt.imshow(CrossSec, origin='lower', extent=[XAxis[0], XAxis[-1], YAxis[0], YAxis[-1]], aspect='auto')
     plt.colorbar()
     plt.xlabel(XAxisLabel)
     plt.gca().invert_xaxis()
