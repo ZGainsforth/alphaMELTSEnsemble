@@ -142,6 +142,7 @@ def Plot2DCrossSection(CrossSec, XAxis, YAxis, XAxisLabel=None, YAxisLabel=None,
     plt.imshow(np.fliplr(CrossSec), origin='lower', extent=[XAxis[0], XAxis[-1], YAxis[0], YAxis[-1]], aspect='auto')
     plt.colorbar()
     plt.xlabel(XAxisLabel)
+    plt.gca().invert_xaxis()
     plt.ylabel(YAxisLabel)
     plt.title(Title)
     
@@ -187,6 +188,7 @@ if __name__ == "__main__":
     plt.imshow(np.fliplr(CrossSec), origin='lower', extent=[TempAxis[0], TempAxis[-1], fO2Axis[0], fO2Axis[-1]], aspect='auto')
     plt.colorbar()
     plt.xlabel('Temperature $^{\circ}$C')
+    plt.gca().invert_xaxis()
     plt.ylabel('f$_{O_2}$')
     plt.title('FitIndex Orthopyroxene')
     plt.show()

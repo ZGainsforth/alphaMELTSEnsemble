@@ -115,6 +115,7 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
     plt.figure()
     plt.plot(FitIndex['Temperature'], FitIndex['FitIndex'])
     plt.xlabel('Temperature')
+    plt.gca().invert_xaxis()
     plt.ylabel('Fit index')
     plt.title('Combined Fit index with {} DOFs'.format(TotalDOF))
     plt.tight_layout()
@@ -374,6 +375,32 @@ def ComputeFitIndex(MELTSCompo, FitCompo):
 
     return FitIndex
 
+def SplitMajorMinor( Values=None, Cutoff=10):
+    """  Which elements are majors or minors varies depending on the circumstances.  Therefore, we need to be able to sort them according to whether their maximum value is above/below a cutoff.
+        Input:
+            Values (dict): A dictionary of components to test whether they are major or minor.  e.g. {'SiO2':50.00, 'MgO':1.0} with a cutoff of 10 means that SiO2 is major and MgO is minor.
+            Cutoff (float): Above this value a component is major.  <= this value a component is minor.  Often a vector of values for each component is passed in.  Therefore, this cutoff applies to the max of that vector.
+        Output:
+            Majors (dict): A dictionary of major comopnents.  Following the example: {'SiO2': 50.00}.
+            Minors (dict): A dictionary of minor components. {'MgO':1.0}
+    """ 
+
+    Majors = dict()
+    Minors = dict()
+
+    for k, v in Values.items():
+        # Sometimes, an empty vector is passed in, so we don't want to plot those.
+        if np.max(v) <= 0:
+            continue
+        # Now evaluate whether this is a major
+        if np.max(v) > Cutoff:
+            Majors[k] = v
+        # or a minor.
+        else:
+            Minors[k] = v
+
+    return Majors, Minors
+
 def PlotOlivine(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     """ PlotOlivine() takes the olivine data output by MELTS and produces a csv file and plots from it.
         Input:
@@ -410,16 +437,19 @@ def PlotOlivine(Data, DirName, PlotAxis='Temperature', FitCompo=None):
         fig, ax = plt.subplots(2,1, figsize=(9,6))
     ax[0].plot(x, Data['Fo'])
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Fo')
     ax[0].set_title('Fo')
-    ax[1].plot(x, Data['Cr2O3'], x, Data['MnO'], x, Data['CaO'], x, Data['NiO'])
+    ax[1].semilogy(x, Data['Cr2O3'], x, Data['MnO'], x, Data['CaO'], x, Data['NiO'])
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('Wt %')
     ax[1].set_title('Minors')
     ax[1].legend(['Cr2O3', 'MnO', 'CaO', 'NiO'])
     if FitCompo is not None:
         ax[2].plot(x, FitIndex)
         ax[2].set_xlabel(xtext)
+        ax[2].invert_xaxis()
         ax[2].set_ylabel('Fit index')
         ax[2].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
@@ -469,31 +499,47 @@ def PlotSpinel(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     x, xtext = GetPlotAxis(Data, PlotAxis)
     # We will either have a two pane or three pane plot depending on whether we computed a fit index.
     if FitCompo is not None:
-        fig, ax = plt.subplots(3,1, figsize=(9,9))
+        fig, ax = plt.subplots(4,1, figsize=(9,12))
     else:
-        fig, ax = plt.subplots(2,1, figsize=(9,6))
+        fig, ax = plt.subplots(3,1, figsize=(9,9))
     ax[0].plot(x, Data['MgOverTet'], x, Data['AlOverOct'], x, Data['Fe3OverSumFe'])
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Site Occupancies')
     ax[0].set_title('Site Occupancies')
     ax[0].legend(['Mg/$\Sigma$Tet', 'Al/$\Sigma$Oct', 'Fe$^{3+}$/$\Sigma$Fe'])
-    ax[1].plot(x, Data['MgO'], x, Data['Al2O3'], x, Data['FeO'], x, Data['Fe2O3'], x, Data['Cr2O3'], x, Data['TiO2'])
+
+    # Majors and Minors
+    Majors, Minors = SplitMajorMinor({k:Data[k] for k in ['MgO', 'Al2O3', 'FeO', 'Fe2O3', 'Cr2O3', 'TiO2', 'MnO', 'NiO', 'SiO2']}, Cutoff=10)
+    # Majors
+    for k, v in Majors.items():
+        ax[1].plot(x, v, label=k)
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('Wt %')
-    ax[1].set_title('Minors')
-    ax[1].legend(['MgO', 'Al2O3', 'FeO', 'Fe2O3', 'Cr2O3', 'TiO2'])
+    ax[1].set_title('Majors')
+    ax[1].legend()
+    # Minors
+    for k, v in Minors.items():
+        ax[2].semilogy(x, v, label=k)
+    ax[2].set_xlabel(xtext)
+    ax[2].invert_xaxis()
+    ax[2].set_ylabel('Wt %')
+    ax[2].set_title('Minors')
+    ax[2].legend()
     if FitCompo is not None:
-        ax[2].plot(x, FitIndex)
-        ax[2].set_xlabel(xtext)
-        ax[2].set_ylabel('Fit index')
-        ax[2].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
+        ax[3].plot(x, FitIndex)
+        ax[3].set_xlabel(xtext)
+        ax[3].invert_xaxis()
+        ax[3].set_ylabel('Fit index')
+        ax[3].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
     mysavefig(os.path.join(DirName, 'Output_SpinelComposition.png'))
 
     return Data
 
 def PlotLiquid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
-    """ PlotLiquid() takes the liquid data output by MELTS and produces a csv file and plots from it.
+    """ Plot Liquid() takes the liquid data output by MELTS and produces a csv file and plots from it.
         Input:
             Data (pd.DataFrame): The data for this phase in this MELTS simulation.
             DirName (str): Location to put output files.
@@ -526,26 +572,34 @@ def PlotLiquid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     else:
         fig, ax = plt.subplots(3,1, figsize=(9,9))
     # Basic properties subplot
-    ax[0].plot(x, Data['Cp'], x, Data['viscosity'], x, Data['Mg#'])
+    ax[0].plot(x, Data['Cp'], x, Data['viscosity']*10, x, Data['Mg#']*10)
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Various units')
     ax[0].set_title('Liquid properties')
-    ax[0].legend(['Cp', 'Viscosity', 'Mg Number'])
+    ax[0].legend(['Cp', 'Viscosity x 10', 'Mg$\#$ x 10'])
+    # Majors and minors
+    Majors, Minors = SplitMajorMinor({k:Data[k] for k in ['SiO2', 'Al2O3', 'Fe2O3', 'FeO', 'MgO', 'CaO', 'TiO2', 'Cr2O3', 'MnO', 'NiO']}, Cutoff=10)
     # Majors
-    ax[1].plot(x, Data['SiO2'], x, Data['Al2O3'], x, Data['Fe2O3'], x, Data['FeO'], x, Data['MgO'], x, Data['CaO'])
+    for k, v in Majors.items():
+        ax[1].plot(x, v, label=k)
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('Wt %')
     ax[1].set_title('Majors')
-    ax[1].legend(['SiO2', 'Al2O3', 'Fe2O3', 'FeO', 'MgO', 'CaO'])
+    ax[1].legend()
     # Minors
-    ax[2].plot(x, Data['TiO2'], x, Data['Cr2O3'], x, Data['MnO'], x, Data['NiO'])
+    for k, v in Minors.items():
+        ax[2].semilogy(x, v, label=k)
     ax[2].set_xlabel(xtext)
+    ax[2].invert_xaxis()
     ax[2].set_ylabel('Wt %')
     ax[2].set_title('Minors')
-    ax[2].legend(['TiO2', 'Cr2O3', 'MnO', 'NiO'])
+    ax[2].legend()
     if FitCompo is not None:
         ax[3].plot(x, FitIndex)
         ax[3].set_xlabel(xtext)
+        ax[3].invert_xaxis()
         ax[3].set_ylabel('Fit index')
         ax[3].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
@@ -601,24 +655,33 @@ def PlotClinopyroxene(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     # Basic properties subplot
     ax[0].plot(x, Data['Mg#']/100, x, Data['AlOverTSite'], x, Data['Fe3OverSumFe'])
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Various units')
     ax[0].set_title('Clinopyroxene properties')
     ax[0].legend(['En Num/100', 'Al/(Al+Si)', 'Fe/$\Sigma$Fe'])
+    
+    # Major and minor plots.
+    Majors, Minors = SplitMajorMinor({k:Data[k] for k in ['SiO2', 'Al2O3', 'Fe2O3', 'FeO', 'MgO', 'CaO', 'TiO2', 'Cr2O3', 'MnO', 'NiO']}, Cutoff=10)
     # Majors
-    ax[1].plot(x, Data['SiO2'], x, Data['Al2O3'], x, Data['Fe2O3'], x, Data['FeO'], x, Data['MgO'], x, Data['CaO'])
+    for k, v in Majors.items():
+        ax[1].plot(x, v, label=k)
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('Wt %')
     ax[1].set_title('Majors')
-    ax[1].legend(['SiO2', 'Al2O3', 'Fe2O3', 'FeO', 'MgO', 'CaO'])
+    ax[1].legend()
     # Minors
-    ax[2].plot(x, Data['TiO2'], x, Data['Cr2O3'], x, Data['MnO'], x, Data['NiO'])
+    for k, v in Majors.items():
+        ax[2].semilogy(x, v, label=k)
     ax[2].set_xlabel(xtext)
+    ax[2].invert_xaxis()
     ax[2].set_ylabel('Wt %')
     ax[2].set_title('Minors')
-    ax[2].legend(['TiO2', 'Cr2O3', 'MnO', 'NiO'])
+    ax[2].legend()
     if FitCompo is not None:
         ax[3].plot(x, FitIndex)
         ax[3].set_xlabel(xtext)
+        ax[3].invert_xaxis()
         ax[3].set_ylabel('Fit index')
         ax[3].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
@@ -674,24 +737,33 @@ def PlotOrthopyroxene(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     # Basic properties subplot
     ax[0].plot(x, Data['Mg#']/100, x, Data['AlOverTSite'], x, Data['Fe3OverSumFe'])
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Various units')
     ax[0].set_title('Orthopyroxene properties')
     ax[0].legend(['En Num/100', 'Al/(Al+Si)', 'Fe/$\Sigma$Fe'])
+
+    # Majors and minors
+    Majors, Minors = SplitMajorMinor({k:Data[k] for k in ['SiO2', 'Al2O3', 'Fe2O3', 'FeO', 'MgO', 'CaO', 'TiO2', 'Cr2O3', 'MnO', 'NiO']}, Cutoff=10)
     # Majors
-    ax[1].plot(x, Data['SiO2'], x, Data['Al2O3'], x, Data['Fe2O3'], x, Data['FeO'], x, Data['MgO'], x, Data['CaO'])
+    for k, v in Majors.items():
+        ax[1].plot(x, v, label=k)
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('Wt %')
     ax[1].set_title('Majors')
-    ax[1].legend(['SiO2', 'Al2O3', 'Fe2O3', 'FeO', 'MgO', 'CaO'])
+    ax[1].legend()
     # Minors
-    ax[2].plot(x, Data['TiO2'], x, Data['Cr2O3'], x, Data['MnO'], x, Data['NiO'])
+    for k, v in Minors.items():
+        ax[2].semilogy(x, v, label=k)
     ax[2].set_xlabel(xtext)
+    ax[2].invert_xaxis()
     ax[2].set_ylabel('Wt %')
     ax[2].set_title('Minors')
-    ax[2].legend(['TiO2', 'Cr2O3', 'MnO', 'NiO'])
+    ax[2].legend()
     if FitCompo is not None:
         ax[3].plot(x, FitIndex)
         ax[3].set_xlabel(xtext)
+        ax[3].invert_xaxis()
         ax[3].set_ylabel('Fit index')
         ax[3].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
@@ -735,16 +807,19 @@ def PlotAlloySolid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     # Basic properties subplot
     ax[0].plot(x, Data['FeOverNi'])
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Dimensionless')
     ax[0].set_title('Fe/Ni')
     ax[1].plot(x, Data['Fe'], x, Data['Ni'])
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('At %')
     ax[1].set_title('Composition')
     ax[1].legend(['Fe', 'Ni'])
     if FitCompo is not None:
         ax[2].plot(x, FitIndex)
         ax[2].set_xlabel(xtext)
+        ax[2].invert_xaxis()
         ax[2].set_ylabel('Fit index')
         ax[2].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
@@ -788,16 +863,19 @@ def PlotAlloyLiquid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     # Basic properties subplot
     ax[0].plot(x, Data['FeOverNi'])
     ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
     ax[0].set_ylabel('Dimensionless')
     ax[0].set_title('Fe/Ni')
     ax[1].plot(x, Data['Fe'], x, Data['Ni'])
     ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
     ax[1].set_ylabel('At %')
     ax[1].set_title('Composition')
     ax[1].legend(['Fe', 'Ni'])
     if FitCompo is not None:
         ax[2].plot(x, FitIndex)
         ax[2].set_xlabel(xtext)
+        ax[2].invert_xaxis()
         ax[2].set_ylabel('Fit index')
         ax[2].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
     plt.tight_layout()
@@ -829,136 +907,6 @@ def PlotCPX(CPXData, DirName):
     CPXData[:,8] = 0
 
     # Check that the structure column always says cpx, and then get rid of it.
-    if any(CPXData[:,7].astype(str) != 'cpx'):
-        print ('alphaMELTS output has a clinopyroxene section for which structure is not cpx.')
-        return
-    CPXData[:,7] = 0
-
-    # Convert CPXData to floats so we can do math.
-    CPXData = CPXData.astype(float)
-
-    # Convert Kelvin to celcius.
-    T = CPXData[:,1].astype(float) - 273.15
-
-    # Nice names for the columuns.
-    P, SiO2, TiO2, Al2O3, Fe2O3, Cr2O3, FeO, MnO, MgO, CaO, Na2O, K2O = [0] + range(9, 20)
-
-    # Calculate total Fe as FeO.
-    FeContent = CPXData[:,FeO] + CPXData[:,Fe2O3]*0.9
-    # And Fe3+/sum(Fe)
-    Fe3OverFe = CPXData[:,Fe2O3]*0.9 / FeContent
-    # Add them to the CPXData
-    FeContent, CPXData, ColNames = AddColumnToMineralData(FeContent, CPXData, 'All Fe as FeO', ColNames)
-    Fe3OverFe, CPXData, ColNames  = AddColumnToMineralData(Fe3OverFe*100, CPXData, 'Fe$^{3+}$/$\sum$Fe$ x $100', ColNames)
-
-    # Plot major components
-    indices = [SiO2, MgO, FeContent]
-    PlotMultiWtPct(T, ColNames, indices, CPXData, DirName, 'CPX Majors')
-
-    # Plot minor components and Fe3+
-    indices = [CaO, Al2O3, MnO, TiO2, Cr2O3, Na2O, Fe3OverFe]
-    PlotMultiWtPct(T, ColNames, indices, CPXData, DirName, 'CPX Minors and Fe$^{3+}$')
-
-    # Output a fit index if appropriate:
-    if ('CPXCompo' in globals()) and (sum(CPXCompo) > 0):
-        FitIndex = zeros(shape(CPXData)[0])
-        indices = [MgO, Al2O3, CaO, Na2O, TiO2, Cr2O3] # Except for Fe.
-
-        # Compute the fit index at this point.
-        FitIndex = [abs(CPXData[:,i].astype(float)-CPXCompo[i])/CPXCompo[i] for i in indices]
-
-        # Add in the Fe.
-        FitIndex = vstack((FitIndex, abs(CPXData[:,FeContent].astype(float)-CPXCompo[FeContent])/CPXCompo[FeContent]))
-        FitIndex = sum(FitIndex,0)/(len(indices)+1)
-
-        ylabeltext = 'Fit index using Mg, Al, Ca, Na, Ti, Cr, and Fe'
-        titletext ='CPX fit index'
-        savefilename = 'CPXFitIndex.png'
-        DrawFitIndexPlot(DirName, FitIndex, T, savefilename, titletext, ylabeltext)
-    else:
-        FitIndex = None
-
-    close('all')
-
-    return T, FitIndex
-
-# def PlotOPX(OPXData, DirName):
-    # """
-
-    # :rtype : T (ndarray) and FitIndex (ndarray)
-    # """
-
-    # # Verify that MELTS hasn't changed the output since we were programmed.
-    # if (OPXData[0,:] != array([b'Pressure', b'Temperature', b'mass', b'S', b'H',
-    #                            b'V', b'Cp', b'structure', b'formula', b'SiO2',
-    #                            b'TiO2', b'Al2O3', b'Fe2O3', b'Cr2O3', b'FeO',
-    #                            b'MnO', b'MgO', b'NiO', b'CaO'])).any():
-    #     print ("alphaMELTS output format for orthopyroxene has changed.")
-    #     return
-
-    # # Get rid of that first header.
-    # ColNames = copy(OPXData[0,:].astype(str))
-    # OPXData = OPXData[1:,:]
-
-    # # Get rid of the formulas column
-    # Formulas = copy(OPXData[:,8])
-    # OPXData[:,8] = 0
-
-    # # Check that the structure column always says cpx, and then get rid of it.
-    # if any(OPXData[:,7].astype(str) != 'opx'):
-    #     print ('alphaMELTS output has an orthopyroxene section for which structure is not opx.')
-    #     return
-    # OPXData[:,7] = 0
-
-    # # Convert OPXData to floats so we can do math.
-    # OPXData = OPXData.astype(float)
-
-    # # Convert Kelvin to celcius.
-    # T = OPXData[:,1].astype(float) - 273.15
-
-    # # Nice names for the columuns.
-    # P, SiO2, TiO2, Al2O3, Fe2O3, Cr2O3, FeO, MnO, MgO, CaO, Na2O, K2O = [0] + list(range(9, 20))
-
-    # # Calculate total Fe as FeO.
-    # FeContent = OPXData[:,FeO] + OPXData[:,Fe2O3]*0.9
-    # # And Fe3+/sum(Fe)
-    # Fe3OverFe = OPXData[:,Fe2O3]*0.9 / FeContent
-    # # Add them to the OPXData
-    # FeContent, OPXData, ColNames = AddColumnToMineralData(FeContent, OPXData, 'All Fe as FeO', ColNames)
-    # Fe3OverFe, OPXData, ColNames  = AddColumnToMineralData(Fe3OverFe*100, OPXData, 'Fe$^{3+}$/$\sum$Fe$ x $100', ColNames)
-
-    # # Plot major components
-    # indices = [SiO2, MgO, FeContent]
-    # PlotMultiWtPct(T, ColNames, indices, OPXData, DirName, 'OPX Majors')
-
-    # # Plot minor components and Fe3+
-    # indices = [CaO, Al2O3, MnO, TiO2, Cr2O3, Na2O, Fe3OverFe]
-    # PlotMultiWtPct(T, ColNames, indices, OPXData, DirName, 'OPX Minors and Fe$^{3+}$')
-
-    # # # Output a fit index if appropriate:
-    # # if 'OPXCompo' in globals() and (sum(OPXCompo) > 0):
-    # #     FitIndex = zeros(shape(OPXData)[0])
-    # #     indices = [MgO, Al2O3, CaO, Na2O, TiO2, Cr2O3] # Except for Fe.
-
-    # #     # Compute the fit index at this point.
-    # #     FitIndex = [abs(OPXData[:,i].astype(float)-OPXCompo[i])/OPXCompo[i] for i in indices]
-
-    # #     # Add in the Fe.
-    # #     FitIndex = vstack((FitIndex, abs(OPXData[:,FeContent].astype(float)-OPXCompo[FeContent])/OPXCompo[FeContent]))
-    # #     FitIndex = sum(FitIndex,0)/(len(indices)+1)
-
-    # #     ylabeltext = 'Fit index using Mg, Al, Ca, Na, Ti, Cr, and Fe'
-    # #     titletext ='OPX fit index'
-    # #     savefilename = 'OPXFitIndex.png'
-    # #     DrawFitIndexPlot(DirName, FitIndex, T, savefilename, titletext, ylabeltext)
-    # # else:
-    # #     FitIndex = None
-    # FitIndex=None
-
-    # close('all')
-
-    # return T, FitIndex
-
 # def PlotFeldspar(FeldsparData, DirName):
     # """
 
