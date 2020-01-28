@@ -31,7 +31,7 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
         with open(os.path.join(DirName, 'alphaMELTS_tbl.txt'), 'r') as myfile:
             data=myfile.read()
     except:
-        print('Failed to open ' + FileName + '.  Skipping.')
+        print('Failed to open ' + os.path.join(DirName, 'alphaMELTS_tbl.txt') + '.  Likely the MELTS computation failed in this portion of phase space.  Skipping.')
         return
 
     ### Phase masses

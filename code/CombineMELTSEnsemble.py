@@ -93,8 +93,12 @@ def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
     # Find out the range of temperatures across all the values of fO2.
     Axis = None
     for i in range(DataGrid.shape[0]):
-        T = np.array(DataGrid.iloc[i][Path[0]][Path[1]][Path[2]])
-        # T = np.array(DataGrid.iloc[i]['MELTS']['Olivine']['Temperature'])
+        # print('DataGrid.iloc[i][Path[0]] = ', DataGrid.iloc[i][Path[0]]['Clinopyroxene'].keys())
+        try:
+            T = np.array(DataGrid.iloc[i][Path[0]][Path[1]][Path[2]])
+            # T = np.array(DataGrid.iloc[i]['MELTS']['Olivine']['Temperature'])
+        except KeyError as e:
+            print(f'{AxisPath} not found.')
         if Axis is None:
             Axis = T
         else:
@@ -118,9 +122,16 @@ def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath):
         Xidx = np.where(XAxis == Xval)[0][0]
         # print('Xidx=', Xidx)
         YAxisPathParts = YAxisPath.split('/')
-        Yvals = np.array(DataGrid.iloc[i][YAxisPathParts[0]][YAxisPathParts[1]][YAxisPathParts[2]])
+        try:
+            Yvals = np.array(DataGrid.iloc[i][YAxisPathParts[0]][YAxisPathParts[1]][YAxisPathParts[2]])
+        except KeyError as e:
+            print(f'{YAxisPathParts} not found.')
         DependentPathParts = DependentPath.split('/')
-        DependentVals = np.array(DataGrid.iloc[i][DependentPathParts[0]][DependentPathParts[1]][DependentPathParts[2]])
+        try:
+            DependentVals = np.array(DataGrid.iloc[i][DependentPathParts[0]][DependentPathParts[1]][DependentPathParts[2]])
+        except KeyError as e:
+            print(f'{DependentPathParts} not found.')
+            DependentVals = np.zeros(len(Yvals))
         # print(DependentVals)
         for j, y in enumerate(Yvals):
             Yidx = np.where(Yvals == y)[0][0]
