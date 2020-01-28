@@ -671,7 +671,7 @@ def PlotClinopyroxene(Data, DirName, PlotAxis='Temperature', FitCompo=None):
     ax[1].set_title('Majors')
     ax[1].legend()
     # Minors
-    for k, v in Majors.items():
+    for k, v in Minors.items():
         ax[2].semilogy(x, v, label=k)
     ax[2].set_xlabel(xtext)
     ax[2].invert_xaxis()
