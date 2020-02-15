@@ -99,10 +99,11 @@ def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
             # T = np.array(DataGrid.iloc[i]['MELTS']['Olivine']['Temperature'])
         except KeyError as e:
             print(f'{AxisPath} not found.')
-        if Axis is None:
-            Axis = T
-        else:
-            Axis = np.union1d(Axis,T)
+        if 'T' in locals():
+            if Axis is None:
+                Axis = T
+            else:
+                Axis = np.union1d(Axis,T)
     # print(Axis[:,np.newaxis].T)
     # print(len(Axis))
     return Axis
@@ -111,7 +112,7 @@ def IndexByPath(Prefix, Path):
     PathStr = ''.join(["['"+s+"']" for s in Path.split("/")])
     return f'{Prefix}{PathStr}'
 
-def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath):
+def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath, Plot=True, SavePath=None):
     XAxis = ExtractIndependentAxis(DataGrid, XAxisPath)
     YAxis = ExtractIndependentAxis(DataGrid, YAxisPath)
     CrossSec = np.zeros((len(XAxis), len(YAxis)))
@@ -131,20 +132,47 @@ def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath):
             DependentVals = np.array(DataGrid.iloc[i][DependentPathParts[0]][DependentPathParts[1]][DependentPathParts[2]])
         except KeyError as e:
             print(f'{DependentPathParts} not found.')
-            DependentVals = np.zeros(len(Yvals))
+            if 'Yvals' in locals():
+                DependentVals = np.zeros(len(Yvals))
         # print(DependentVals)
-        for j, y in enumerate(Yvals):
-            Yidx = np.where(YAxis == y)[0][0]
-            CrossSec[Xidx, Yidx] = DependentVals[j]
+        if 'Yvals' in locals():
+            for j, y in enumerate(Yvals):
+                Yidx = np.where(YAxis == y)[0][0]
+                CrossSec[Xidx, Yidx] = DependentVals[j]
+    # If the user wants this plotted then we do that now.
+    if Plot==True:
+        plt.figure()
+        # Zeros will mess up the scale of the plot.  We want it to autoscale only on the numbered data.
+        CrossSec[CrossSec==0] = np.NaN
+        # Figure out the label names.
+        XLabel =  DetermineLabelName(XAxisPath)
+        YLabel =  DetermineLabelName(YAxisPath)
+        Title = DependentPath.split('/')[-2] + ' ' + DependentPath.split('/')[-1] 
+        Plot2DCrossSection(CrossSec, XAxis, YAxis, XLabel, YLabel, Title)
+        if SavePath is not None:
+            plt.savefig(SavePath)
     return XAxis, YAxis, CrossSec
 
-def Plot2DCrossSection(CrossSec, XAxis, YAxis, XAxisLabel=None, YAxisLabel=None, Title=None):
+def DetermineLabelName(AxisPath):
+    # The label is the last items on the AxisPath.  For example, if the path is MELTS/Olivine/Temperature then the axis will be labeled as temp.
+    Label = AxisPath.split('/')[-1]
+    # Some labels have prettier versions with LaTeX to make it nice in matplotlib.
+    if Label == 'fO2':
+        Label = 'f$_{O_2}$'
+    if Label == 'Temperature':
+        Label = 'Temperature $^{\circ}$C'
+    return Label
+
+def Plot2DCrossSection(CrossSec, XAxis, YAxis, XAxisLabel=None, YAxisLabel=None, Title=None, SavePath=None):
     plt.imshow(CrossSec, origin='lower', extent=[XAxis[0], XAxis[-1], YAxis[0], YAxis[-1]], aspect='auto')
     plt.colorbar()
     plt.xlabel(XAxisLabel)
     plt.gca().invert_xaxis()
     plt.ylabel(YAxisLabel)
     plt.title(Title)
+    if SavePath is not None:
+        plt.savefig(SavePath)
+
     
 if __name__ == "__main__":
     print('------------------------------ START ------------------------------')

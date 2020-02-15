@@ -176,8 +176,8 @@ def GetalphaMELTSSection(data, start):
     SectionData = np.genfromtxt(StringIO(SectionStr), skip_header=1, skip_footer=0, dtype=None)
     return SectionData
 
-def PlotMultiWtPct(T, ColNames, indices, MineralData, DirName, PlotTitle):
-    """ PlotMultiWtPct
+def PlotMassPercents(T, ColNames, indices, MineralData, DirName, PlotTitle, NumLegendCols=5):
+    """ PlotMassPercents 
         Input:
             T (np.array): Temperature axis.
             ColNames (list): The names of all the elements (or phases) to plot.
@@ -210,8 +210,9 @@ def PlotMultiWtPct(T, ColNames, indices, MineralData, DirName, PlotTitle):
 
     # Make a fancy looking legend.
     box = ax.get_position()
-    LegendHeightFraction = 0.15
-    plt.legend(LegendList, loc='lower center', ncol=5, bbox_to_anchor=(0.5,-LegendHeightFraction-0.1), prop={'size':8})
+    LegendHeightFraction = 0.1 * float(len(ColNames)//NumLegendCols)
+    print(LegendHeightFraction)
+    plt.legend(LegendList, loc='lower center', ncol=NumLegendCols, bbox_to_anchor=(0.5,-LegendHeightFraction-0.15), prop={'size':8})
     ax.set_position([box.x0, box.y0 + box.height * LegendHeightFraction, box.height, box.height*(1-LegendHeightFraction)])
     OutFileName = ''.join(x for x in os.path.join(DirName, 'Output_' + PlotTitle + '.png') if x in valid_chars)
 
@@ -259,7 +260,7 @@ def PlotPhaseMasses(PhaseData, DirName):
     PhaseData[:,2] = 100
 
     # Plot all phases
-    PlotMultiWtPct(T, Columns, Indices, PhaseData, DirName, 'Phase mass percents')
+    PlotMassPercents(T, Columns, Indices, PhaseData, DirName, 'Phase mass percents', NumLegendCols=4)
     
     # Write the phases to a csv file so we can manipulate it later.
     np.savetxt(os.path.join(DirName, 'Output_PhaseMassPercents.csv'), PhaseData, delimiter=',', header=','.join(ColNames))
@@ -1064,3 +1065,4 @@ if __name__ == '__main__':
             ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
         Computes = [DoOneDir(Dir) for Dir in Dirs]
         dask.compute(Computes)
+        

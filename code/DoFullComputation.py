@@ -10,51 +10,10 @@ from CombineMELTSEnsemble import ReadInAllOutputs, Make2DCrossSection, Plot2DCro
 
 if __name__ == "__main__":
     print('------------------------------ START ------------------------------')
-    # Only needs to be done if changing bulk composition or initial conditions/parameterization.
-    DoMELTSSims = True
-    # Only needs to be run if we changed the fitindex properties or something like that.
-    DoAnalysis = True
-    # We should replot.
-    DoPlotting = True
 
-    # Set up directory structure
-    # Location to the alphamelts executable.
-    alphaMELTSLocation = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'alphamelts')
-    # Location to where to put the compute files.
-    ComputeScratchSpace = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ComputeScratchSpace2')
+    # The user should edit the file SimulationParameters.py.  It has the input composition, etc.
+    from SimulationParameters import *
 
-    # Constant inputs
-    ConstantInputs = dict()
-    ConstantInputs['Title'] = 'VaryfO2'
-    ConstantInputs['Buffer'] = 'IW'
-    # Set the temperature.  Because this is a single value, there will only be an initial temperature entry made in the inputs melt file.
-    ConstantInputs['T'] = 2000 # Temperature
-    ConstantInputs['P'] = 1 # Bar
-    # And so for all the elements.
-    ConstantInputs['SiO2'] = 44.10
-    ConstantInputs['TiO2'] = 0.07
-    ConstantInputs['Al2O3'] = 0.66
-    ConstantInputs['Cr2O3'] = 0.52
-    ConstantInputs['FeO'] = 11.53
-    ConstantInputs['MnO'] = 1.34
-    ConstantInputs['MgO'] = 38.95
-    ConstantInputs['CaO'] = 0.62
-    ConstantInputs['NiO'] = 0.31
-    
-    # Set up the inputs to the simulation that vary.
-    ParameterizedInputs = OrderedDict()
-    # Set the fugacity.  Because this is a set of values, a new MELTS simulation will be created for each value.
-    ParameterizedInputs['fO2'] = np.arange(-6, 0, 0.25)
-    # ParameterizedInputs['Na2O'] = np.arange(0.00, 5.00, 1)
-
-    # Create a dictionary for each phase that we want to include in a fit index.
-    # Each phase has a dictionary for all the oxides to include.
-    TargetCompositions = dict()
-    TargetCompositions['Olivine'] = {'SiO2':41.626, 'MgO':48.536, 'FeO':7.849}#, 'MnO':1.494, 'CaO':0.101, 'Cr2O3':0.394}
-    TargetCompositions['Orthopyroxene'] = {'SiO2':54.437, 'MgO':31.335, 'FeO':4.724}
-    # TargetCompositions['Alloy-Liquid'] = {'Fe':91.428, 'Ni':8.572}
-    TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
-     
     print('------------------------------ MELTS SIMULATIONS --------------------------')
 
     if DoMELTSSims:
@@ -63,7 +22,7 @@ if __name__ == "__main__":
                                 ConstantInputs, ParameterizedInputs)
 
         # And run them
-        os.system('cd ' + ComputeScratchSpace + '; parallel < runall.sh; cd -')
+        os.system('cd "' + ComputeScratchSpace + '"; parallel < runall.sh; cd -')
 
     print('------------------------------ ANALYZE MELTS SIMULATIONS ---------------------------')
 
@@ -71,7 +30,7 @@ if __name__ == "__main__":
         ProcessOneDirectory = False
         if ProcessOneDirectory:
             # Do a computation on a single directory
-            DirName = '../ComputeScratchSpace2/VaryfO2_fO2=-4.5'
+            DirName = '../ComputeScratchSpace/VaryfO2_fO2=-4.5'
             ProcessAlphaMELTS(DirName=DirName, TargetCompositions=TargetCompositions)
         else:
             # Or in parallel on an entire ensemble.
@@ -111,27 +70,9 @@ if __name__ == "__main__":
 
         DataGrid = ReadInAllOutputs(ComputeScratchSpace, DataGrid)
 
-        plt.figure()
-        fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Olivine/Temperature', 'MELTS/Olivine/FitIndex')
-        CrossSec[CrossSec==0] = np.NaN
-        Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Olivine')
-
-        plt.figure()
-        fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Orthopyroxene/Temperature', 'MELTS/Orthopyroxene/FitIndex')
-        CrossSec[CrossSec==0] = np.NaN
-        Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Orthopyroxene')
-
-        plt.figure()
-        fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Liquid/Temperature', 'MELTS/Liquid/FitIndex')
-        CrossSec[CrossSec==0] = np.NaN
-        Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Glass')
-
-        plt.figure()
-        fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/CombinedFitIndex/Temperature', 'MELTS/CombinedFitIndex/FitIndex')
-        CrossSec[CrossSec==0] = np.NaN
-        Plot2DCrossSection(CrossSec, TempAxis, fO2Axis, 'Temperature $^{\circ}$C', 'f$_{O_2}$', 'FitIndex Combined')
+        # This funtion is in SimulationParameters.py -- configured by the user.
+        DrawEnsemblePlots(ComputeScratchSpace, DataGrid)
 
         plt.show()
 
     print('------------------------------ DONE ------------------------------')
-

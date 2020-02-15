@@ -98,8 +98,8 @@ def GenerateMELTSEnsemble(  alphaMELTSLocation, ComputeScratchSpace,
             shutil.copy(os.path.join(Path(__file__).parent.absolute(), FileName), os.path.join(ComputeDir, FileName))
 
         # Add this computation to the RunAll file.
-        RunAll += 'cd "' + ComputeDir + '" && '
-        RunAll += os.path.join(alphaMELTSLocation, 'run_alphamelts.command') + ' -f alphamelts_settings.txt -b mybatch\n'
+        RunAll += 'cd "' + ComputeDir + '" && "'
+        RunAll += os.path.join(alphaMELTSLocation, 'run_alphamelts.command') + '" -f alphamelts_settings.txt -b mybatch\n'
 
     # Store the parameterized space to disk so we can reassemble the ensemble later.
     dd.io.save(os.path.join(ComputeScratchSpace, 'ConstantInputs.hdf5'), ConstantInputs)
