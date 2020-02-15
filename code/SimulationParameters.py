@@ -50,6 +50,7 @@ TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
 
 # At the end of the plotting stage, after all data is gathered and processed, which final plots do you want to draw?
 def DrawEnsemblePlots(ComputeScratchSpace, DataGrid):
+
     fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Olivine/Temperature', 'MELTS/Olivine/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexOlivine.pdf'))
 
     fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Orthopyroxene/Temperature', 'MELTS/Orthopyroxene/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexOrthopyroxene.pdf'))
@@ -58,3 +59,4 @@ def DrawEnsemblePlots(ComputeScratchSpace, DataGrid):
 
     fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/CombinedFitIndex/Temperature', 'MELTS/CombinedFitIndex/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexCombined.pdf'))
 
+    fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Olivine/Temperature', 'MELTS/Olivine/FeO', SavePath=os.path.join(ComputeScratchSpace, 'OlivineMgO.pdf'))
