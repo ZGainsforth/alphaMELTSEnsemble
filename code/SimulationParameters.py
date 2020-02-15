@@ -4,9 +4,9 @@ import numpy as np
 from CombineMELTSEnsemble import Make2DCrossSection, Plot2DCrossSection
 
 # Only needs to be done if changing bulk composition or initial conditions/parameterization.
-DoMELTSSims = False
+DoMELTSSims = True
 # Only needs to be run if we changed the fitindex properties or something like that.
-DoAnalysis = False
+DoAnalysis = True
 # We should replot.
 DoPlotting = True
 
