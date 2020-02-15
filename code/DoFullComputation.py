@@ -11,7 +11,7 @@ from CombineMELTSEnsemble import ReadInAllOutputs, Make2DCrossSection, Plot2DCro
 if __name__ == "__main__":
     print('------------------------------ START ------------------------------')
 
-    # The user should edit the file SimulationParameters.py.  It has the input composition, etc.
+    # NOTA BENE!  There is no longer a need to edit the file.  All the input parameters and editable portions have been moved to SimulationParameters.py.  The user should edit the file SimulationParameters.py.  It has the input composition as well as desired output plots, etc.
     from SimulationParameters import *
 
     print('------------------------------ MELTS SIMULATIONS --------------------------')

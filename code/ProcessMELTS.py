@@ -99,16 +99,10 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
             TempFitAxis = TempFitAxis[Mask]
             TempFitIndex = TempFitIndex[Mask]
             # Finally, we get to add the FitIndexes together.
-            # print(CombinedFitIndex[:, np.newaxis].T)
             CombinedFitIndex += TempFitIndex
-            # print(CombinedFitIndex[:, np.newaxis].T)
 
     # After combining the fit indices, we need to divide by the total DOF.
     CombinedFitIndex /= TotalDOF
-
-    # print(CombinedFitAxis[:,np.newaxis].T)
-    # print(CombinedFitIndex[:,np.newaxis].T)
-    # print(TotalDOF)
 
     # Save the ensemble fit index as a csv.
     FitIndex = pd.DataFrame({'Temperature':CombinedFitAxis, 'FitIndex':CombinedFitIndex})
@@ -173,7 +167,7 @@ def GetalphaMELTSSection(data, start):
         return None
 
     # Convert it into a numpy array.
-    SectionData = np.genfromtxt(StringIO(SectionStr), skip_header=1, skip_footer=0, dtype=None)
+    SectionData = np.genfromtxt(StringIO(SectionStr), skip_header=1, skip_footer=0, dtype=None, encoding=None)
     return SectionData
 
 def PlotMassPercents(T, ColNames, indices, MineralData, DirName, PlotTitle, NumLegendCols=5):
@@ -211,7 +205,6 @@ def PlotMassPercents(T, ColNames, indices, MineralData, DirName, PlotTitle, NumL
     # Make a fancy looking legend.
     box = ax.get_position()
     LegendHeightFraction = 0.1 * float(len(ColNames)//NumLegendCols)
-    print(LegendHeightFraction)
     plt.legend(LegendList, loc='lower center', ncol=NumLegendCols, bbox_to_anchor=(0.5,-LegendHeightFraction-0.15), prop={'size':8})
     ax.set_position([box.x0, box.y0 + box.height * LegendHeightFraction, box.height, box.height*(1-LegendHeightFraction)])
     OutFileName = ''.join(x for x in os.path.join(DirName, 'Output_' + PlotTitle + '.png') if x in valid_chars)
@@ -232,7 +225,7 @@ def PlotPhaseMasses(PhaseData, DirName):
 
     # Verify that MELTS hasn't changed the output since we were programmed.
     # This section has variable headers, but the first 3 should be the same.
-    if (PhaseData[0,:3] != np.array([b'Pressure', b'Temperature', b'mass'])).any():
+    if (PhaseData[0,:3] != np.array(['Pressure', 'Temperature', 'mass'])).any():
         print ("alphaMELTS output format for phase masses has changed.")
         return
 
@@ -887,28 +880,6 @@ def PlotAlloyLiquid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
 
     return Data
 
-def PlotCPX(CPXData, DirName):
-    """
-
-    :rtype : T (ndarray) and FitIndex (ndarray)
-    """
-
-    # Verify that MELTS hasn't changed the output since we were programmed.
-    if (CPXData[0,:] != array([b'Pressure', b'Temperature', b'mass', b'S', b'H',
-                               b'V', b'Cp', b'structure', b'formula', b'SiO2',
-                               b'TiO2', b'Al2O3', b'Fe2O3', b'Cr2O3', b'FeO',
-                               b'MnO', b'MgO', b'NiO', b'CaO'])).any():
-                               # b'MnO', b'MgO', b'CaO', b'Na2O', b'K2O'])).any():
-        print ("alphaMELTS output format for clinopyroxene has changed.")
-        return
-
-    # Get rid of that first header.
-    ColNames = copy(CPXData[0,:].astype(str))
-    CPXData = CPXData[1:,:]
-
-    # Get rid of the formulas column
-    Formulas = copy(CPXData[:,8].astype(str))
-    CPXData[:,8] = 0
 
     # Check that the structure column always says cpx, and then get rid of it.
 # def PlotFeldspar(FeldsparData, DirName):

@@ -75,9 +75,6 @@ def ReadInAllOutputs(ComputeScratchSpace, DataGrid):
                 continue
             MELTSData[PhaseName] = DataItem
         DataGrid.at[i, 'MELTS'] = MELTSData
-        print(MELTSData.keys())
-        # if i > 5:
-        #     break
 
     return DataGrid
 
@@ -93,7 +90,6 @@ def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
     # Find out the range of temperatures across all the values of fO2.
     Axis = None
     for i in range(DataGrid.shape[0]):
-        # print('DataGrid.iloc[i][Path[0]] = ', DataGrid.iloc[i][Path[0]]['Clinopyroxene'].keys())
         try:
             T = np.array(DataGrid.iloc[i][Path[0]][Path[1]][Path[2]])
             # T = np.array(DataGrid.iloc[i]['MELTS']['Olivine']['Temperature'])
@@ -104,8 +100,6 @@ def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
                 Axis = T
             else:
                 Axis = np.union1d(Axis,T)
-    # print(Axis[:,np.newaxis].T)
-    # print(len(Axis))
     return Axis
 
 def IndexByPath(Prefix, Path):
@@ -116,12 +110,9 @@ def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath, Plot=True,
     XAxis = ExtractIndependentAxis(DataGrid, XAxisPath)
     YAxis = ExtractIndependentAxis(DataGrid, YAxisPath)
     CrossSec = np.zeros((len(XAxis), len(YAxis)))
-    # print(CrossSec.shape)
     for i in range(DataGrid.shape[0]):
         Xval = DataGrid.iloc[i][XAxisPath]
-        # print('Xval=',Xval)
         Xidx = np.where(XAxis == Xval)[0][0]
-        # print('Xidx=', Xidx)
         YAxisPathParts = YAxisPath.split('/')
         try:
             Yvals = np.array(DataGrid.iloc[i][YAxisPathParts[0]][YAxisPathParts[1]][YAxisPathParts[2]])
@@ -134,7 +125,6 @@ def Make2DCrossSection(DataGrid, XAxisPath, YAxisPath, DependentPath, Plot=True,
             print(f'{DependentPathParts} not found.')
             if 'Yvals' in locals():
                 DependentVals = np.zeros(len(Yvals))
-        # print(DependentVals)
         if 'Yvals' in locals():
             for j, y in enumerate(Yvals):
                 Yidx = np.where(YAxis == y)[0][0]
@@ -192,7 +182,6 @@ if __name__ == "__main__":
     DataGrid = pd.read_csv(os.path.join(ComputeScratchSpace, 'ParameterGrid.csv'), index_col=0)
 
     DataGrid = ReadInAllOutputs(ComputeScratchSpace, DataGrid)
-    # print(DataGrid.iloc[0]['MELTS'])
 
     # Constraints = {'Na2O': 0.0}
     # IndependentVariable = {'fO2': 'fO2'}

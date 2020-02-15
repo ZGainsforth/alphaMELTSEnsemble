@@ -54,12 +54,6 @@ def DrawEnsemblePlots(ComputeScratchSpace, DataGrid):
 
     fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Orthopyroxene/Temperature', 'MELTS/Orthopyroxene/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexOrthopyroxene.pdf'))
 
-    fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Clinopyroxene/Temperature', 'MELTS/Clinopyroxene/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexClinopyroxene.pdf'))
-
-    fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/AlloySolid/Temperature', 'MELTS/AlloySolid/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexAlloySolid.pdf'))
-
-    fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/AlloyLiquid/Temperature', 'MELTS/AlloyLiquid/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexAlloyLiquid.pdf'))
-
     fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/Liquid/Temperature', 'MELTS/Liquid/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexLiquid.pdf'))
 
     fO2Axis, TempAxis, CrossSec = Make2DCrossSection(DataGrid, 'fO2', 'MELTS/CombinedFitIndex/Temperature', 'MELTS/CombinedFitIndex/FitIndex', SavePath=os.path.join(ComputeScratchSpace, 'FitIndexCombined.pdf'))
