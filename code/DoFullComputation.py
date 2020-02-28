@@ -7,6 +7,7 @@ import pandas as pd
 from GenMELTSEnsemble import GenerateMELTSEnsemble
 from ProcessMELTS import ProcessAlphaMELTS
 from CombineMELTSEnsemble import ReadInAllOutputs, Make2DCrossSection, Plot2DCrossSection
+from rich.traceback import install; install()
 
 if __name__ == "__main__":
     print('------------------------------ START ------------------------------')

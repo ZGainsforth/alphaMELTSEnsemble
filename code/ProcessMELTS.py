@@ -10,6 +10,7 @@ import platform
 import os, sys, shutil
 from io import StringIO
 import pickle
+from rich.traceback import install; install()
 
 # Plotting is great, but slows things down by about 3x.  So if you just want the final plots from PlotParameterSpace.py you can disable the plotting of each phase composition and fit index here.
 enable_plotting = True
@@ -62,6 +63,12 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
     ### Clinopyroxene
     PhasesData['Clinopyroxene'] = ExtractAndPlotOnePhase(data, 'Clinopyroxene', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
+    ### Plagioclase feldspar
+    PhasesData['Plagioclase'] = ExtractAndPlotOnePhase(data, 'Plagioclase', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+
+    ### Orthoclase feldspar
+    PhasesData['Orthoclase'] = ExtractAndPlotOnePhase(data, 'Orthoclase', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
+
     ### Alloy-Solid (metal)
     PhasesData['Alloy-Solid'] = ExtractAndPlotOnePhase(data, 'Alloy-Solid', DirName, PlotAxis='Temperature', TargetCompositions=TargetCompositions)
 
@@ -102,7 +109,12 @@ def ProcessAlphaMELTS(DirName=os.getcwd(), TargetCompositions=dict()):
             CombinedFitIndex += TempFitIndex
 
     # After combining the fit indices, we need to divide by the total DOF.
-    CombinedFitIndex /= TotalDOF
+    if CombinedFitIndex is not None:
+        CombinedFitIndex /= TotalDOF
+    else:
+        # This can happen when the mineral that is used for calculating the fit index occurs in none of the simulations.
+        CombinedFitAxis = np.array([0,0])
+        CombinedFitIndex =  np.array([0,0])
 
     # Save the ensemble fit index as a csv.
     FitIndex = pd.DataFrame({'Temperature':CombinedFitAxis, 'FitIndex':CombinedFitIndex})
@@ -262,14 +274,10 @@ def PlotPhaseMasses(PhaseData, DirName):
 
     return
 
-def ExtractAndPlotOnePhase(MELTSData, PhaseName, DirName, PlotAxis='Temperature', TargetCompositions=None):
+def ReadOnePhaseFromMELTSOutputFile(MELTSData, PhaseName):
     # Get the chunk of text for this phase.
-    header = PhaseName.lower() + '_0 thermodynamic data and composition:'
+    header = PhaseName + ' thermodynamic data and composition:'
     DataRaw = GetalphaMELTSSectionAsTxt(MELTSData, header)
-
-    print(PhaseName)
-
-    # Check if this MELTS computation includes this phase.
     if DataRaw is not None:
         # Read text as a CSV and default everything to floats, except for a couple fields that are strings.
         Data = pd.read_csv(DataRaw, header=1, delimiter=' ')
@@ -279,6 +287,53 @@ def ExtractAndPlotOnePhase(MELTSData, PhaseName, DirName, PlotAxis='Temperature'
 
         # Convert Kelvin to Celcius.
         Data['Temperature'] -= 273.15
+        
+        return Data
+    else:
+        return None
+
+def GetFeldsparFromMELTSOutputFile(MELTSData, PhaseName):
+    # Try each possible MELTS phase until we find the one that matches what we want.
+    for MELTSName in ['feldspar_0', 'feldspar_1']:
+        Data = ReadOnePhaseFromMELTSOutputFile(MELTSData, MELTSName)
+        if Data is None:
+            continue
+        if (PhaseName == 'Plagioclase') and (Data['K2O'] < Data['Na2O']).all():
+            print(f'{MELTSName} is {PhaseName}')
+            return Data
+        elif (PhaseName == 'Orthoclase') and (Data['K2O'] >= Data['Na2O']).all():
+            print(f'{MELTSName} is {PhaseName}')
+            return Data
+    print(f'Did not find {PhaseName}.')
+    return None
+    
+def ExtractAndPlotOnePhase(MELTSData, PhaseName, DirName, PlotAxis='Temperature', TargetCompositions=None):
+
+    print(PhaseName)
+
+    # For most phases there is a one to one mapping, e.g. Olivine = olivine_0 always.
+    # For those phases we just use a dictionary lookup.
+    PhaseNameMapOneToOne = {
+            'Olivine'        :  'olivine_0',
+            'Spinel'         :  'spinel_0',
+            'Liquid'         :  'liquid_0',
+            'Orthopyroxene'  :  'orthopyroxene_0',
+            'Clinopyroxene'  :  'clinopyroxene_0',
+            'Alloy-Solid'    :  'alloy-solid_0',
+            'Alloy-Liquid'   :  'alloy-liquid_0',
+            }
+
+    if PhaseName in PhaseNameMapOneToOne :
+        Data = ReadOnePhaseFromMELTSOutputFile(MELTSData, PhaseNameMapOneToOne[PhaseName])
+    else:
+        # For phases with a many to many mapping we have to test all combos.  First read both phases from the MELTS output.  One may be empty.
+        if PhaseName in ['Plagioclase', 'Orthoclase']:
+            Data = GetFeldsparFromMELTSOutputFile(MELTSData, PhaseName)
+        else:
+            Data = None
+
+    # Check if this MELTS computation includes this phase.
+    if Data is not None:
 
         # Determine if this phase participates in the FitIndex compute.
         if PhaseName in TargetCompositions.keys():
@@ -293,8 +348,10 @@ def ExtractAndPlotOnePhase(MELTSData, PhaseName, DirName, PlotAxis='Temperature'
             PhaseData = PlotSpinel(Data, DirName, FitCompo=PhaseCompo)
         elif PhaseName == 'Liquid':
             PhaseData = PlotLiquid(Data, DirName, FitCompo=PhaseCompo)
-        # elif PhaseName == 'Feldspar':
-        #     PhaseData = PlotFeldspar(Data, DirName, FitCompo=PhaseCompo)
+        elif PhaseName == 'Plagioclase':
+            PhaseData = PlotFeldspar(Data, DirName, FitCompo=PhaseCompo, WhichFeldspar='Plagioclase')
+        elif PhaseName == 'Orthoclase':
+            PhaseData = PlotFeldspar(Data, DirName, FitCompo=PhaseCompo, WhichFeldspar='Orthoclase')
         elif PhaseName == 'Clinopyroxene':
             PhaseData = PlotClinopyroxene(Data, DirName, FitCompo=PhaseCompo)
         elif PhaseName == 'Orthopyroxene':
@@ -880,6 +937,83 @@ def PlotAlloyLiquid(Data, DirName, PlotAxis='Temperature', FitCompo=None):
 
     return Data
 
+def PlotFeldspar(Data, DirName, PlotAxis='Temperature', FitCompo=None, WhichFeldspar='Plagioclase'):
+    """    PlotFeldspar() takes the feldspar data output by MELTS and produces a csv file and plots from it.
+          There are often two feldspars so we have to process them both when this happens.
+        Input:
+            Data (pd.DataFrame): The data for this phase in this MELTS simulation.
+            DirName (str): Location to put output files.
+            PlotAxis (str): Column name which comprises the x-axis of plots.
+            FitCompo (dict): Oxide Wt% values to use to compute a fit index.  If None, no fit index is computed.
+                The format is like: {'SiO2': 45.05, 'MgO': 30.50 ...}
+        Output:
+            Feldspar0.csv: CSV file containing all the information.
+            Feldspar0.png: Plot of the phases as a function of temperature.
+    """
+
+    # Compute formula numbers which are relevant.
+    KNum = ExtractFormulaComponent(Data['formula'], 'K([0-9.]*)Na')
+    NaNum = ExtractFormulaComponent(Data['formula'], "Na([0-9.]*)Ca")
+    CaNum = ExtractFormulaComponent(Data['formula'], "Ca([0-9.]*)Al")
+    AlNum = ExtractFormulaComponent(Data['formula'], "Al([0-9.]*)Si")
+    SiNum = ExtractFormulaComponent(Data['formula'], "Si([0-9.]*)O")
+    Data['An#'] = CaNum/(CaNum+NaNum+KNum)*100
+    Data['Ab#'] = NaNum/(CaNum+NaNum+KNum)*100
+    Data['Or#'] = KNum/(CaNum+NaNum+KNum)*100
+    AlOverTSite = AlNum / (AlNum+SiNum)
+    Data['AlOverTSite'] = AlOverTSite
+
+    # If a composition has been given for computing the fit index, then we will compute it now.
+    if FitCompo is not None:
+        FitIndex = ComputeFitIndex(Data, FitCompo)
+        Data['FitIndex'] = FitIndex
+
+    # Now output a csv to disk for future reference.
+    Data.to_csv(os.path.join(DirName, f'Output_{WhichFeldspar}.csv'))
+
+    # Plot the stats in some pretty charts here.
+    x, xtext = GetPlotAxis(Data, PlotAxis)
+    # We will either have a two pane or three pane plot depending on whether we computed a fit index.
+    if FitCompo is not None:
+        fig, ax = plt.subplots(4,1, figsize=(9,12))
+    else:
+        fig, ax = plt.subplots(3,1, figsize=(9,9))
+    # Basic properties subplot
+    ax[0].plot(x, Data['An#']/100, x, Data['Ab#']/100, x, Data['Or#']/100, x, Data['AlOverTSite'])
+    ax[0].set_xlabel(xtext)
+    ax[0].invert_xaxis()
+    ax[0].set_ylabel('Various units')
+    ax[0].set_title(f'{WhichFeldspar} properties')
+    ax[0].legend(['An Num/100', 'Ab Num/100', 'Or Num/100', 'Al/(Al+Si)'])
+
+    # Majors and minors
+    Majors, Minors = SplitMajorMinor({k:Data[k] for k in ['SiO2', 'Al2O3', 'CaO', 'Na2O', 'K2O', 'FeO', 'Fe2O3', 'MgO', 'TiO2', 'Cr2O3', 'MnO', 'NiO']}, Cutoff=10)
+    # Majors
+    for k, v in Majors.items():
+        ax[1].plot(x, v, label=k)
+    ax[1].set_xlabel(xtext)
+    ax[1].invert_xaxis()
+    ax[1].set_ylabel('Wt %')
+    ax[1].set_title('Majors')
+    ax[1].legend()
+    # Minors
+    for k, v in Minors.items():
+        ax[2].semilogy(x, v, label=k)
+    ax[2].set_xlabel(xtext)
+    ax[2].invert_xaxis()
+    ax[2].set_ylabel('Wt %')
+    ax[2].set_title('Minors')
+    ax[2].legend()
+    if FitCompo is not None:
+        ax[3].plot(x, FitIndex)
+        ax[3].set_xlabel(xtext)
+        ax[3].invert_xaxis()
+        ax[3].set_ylabel('Fit index')
+        ax[3].set_title('Fit index with {} DOFs'.format(len(FitCompo)))
+    plt.tight_layout()
+    mysavefig(os.path.join(DirName, f'Output_{WhichFeldspar}Composition.png'))
+
+    return Data
 
     # Check that the structure column always says cpx, and then get rid of it.
 # def PlotFeldspar(FeldsparData, DirName):
@@ -1011,8 +1145,9 @@ if __name__ == '__main__':
     TargetCompositions = dict()
     TargetCompositions['Olivine'] = {'SiO2':41.626, 'MgO':48.536, 'FeO':7.849}#, 'MnO':1.494, 'CaO':0.101, 'Cr2O3':0.394}
     TargetCompositions['Orthopyroxene'] = {'SiO2':54.437, 'MgO':31.335, 'FeO':4.724}
+    TargetCompositions['Plagioclase'] = {'SiO2':49.756, 'Al2O3':29.840, 'CaO':14.838}
     # TargetCompositions['Alloy-Liquid'] = {'Fe':91.428, 'Ni':8.572}
-    TargetCompositions['Liquid'] = {'SiO2':48.736, 'MgO':25.867}
+    TargetCompositions['Liquid'] = {'SiO2':51.161, 'Al2O3':33.656}
     
     ProcessOneDirectory = True
     if ProcessOneDirectory:

@@ -67,7 +67,7 @@ def ReadInAllOutputs(ComputeScratchSpace, DataGrid):
         # MELTSData will be a list of dataframes -- one for each phase that exists in that MELTS computation.
         MELTSData = dict()
         # Read in the phases that exist.
-        for PhaseName  in ['PhaseMassPercents', 'CombinedFitIndex', 'Olivine', 'Clinopyroxene', 'Orthopyroxene', 'Liquid', 'Spinel', 'AlloyLiquid', 'AlloySolid']:
+        for PhaseName  in ['PhaseMassPercents', 'CombinedFitIndex', 'Olivine', 'Clinopyroxene', 'Orthopyroxene', 'Plagioclase', 'Orthoclase', 'Liquid', 'Spinel', 'AlloyLiquid', 'AlloySolid']:
             try:
                 DataItem = pd.read_csv(os.path.join(ComputeScratchSpace, DataGrid.iloc[i]['DirName'], 'Output_' + PhaseName + '.csv'))
             except FileNotFoundError as e:
@@ -109,6 +109,12 @@ def IndexByPath(Prefix, Path):
 def Make2DCrossSection(DataGrid, ParameterizedAxisPath, IndependentAxisPath, DependentPath, Plot=True, SavePath=None):
     ParameterizedAxis = ExtractIndependentAxis(DataGrid, ParameterizedAxisPath)
     IndependentAxis = ExtractIndependentAxis(DataGrid, IndependentAxisPath)
+    if ParameterizedAxis is None:
+        print(f'Make2DCrossSection: cannot find parameterized axis: {ParameterizedAxisPath}. It is likely that you are trying to draw a plot for a phase that didn\'t occur in the output simulations.')
+        return None, None, None
+    if IndependentAxis is None:
+        print(f'Make2DCrossSection: cannot find independent axis: {IndependentAxisPath}.  It is likely that you are trying to draw a plot for a phase that didn\'t occur in the output simulations.')
+        return None, None, None
     CrossSec = np.zeros((len(ParameterizedAxis), len(IndependentAxis)))
     for i in range(DataGrid.shape[0]):
         Parameterizedval = DataGrid.iloc[i][ParameterizedAxisPath]
