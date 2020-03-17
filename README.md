@@ -1,6 +1,8 @@
 # alphaMELTSEnsemble
 Code to run a large number of alphaMELTS simulations and to plot the outputs from those simulations as a combined object.
 
+There is a quick video introduction to the code available here:  https://www.youtube.com/watch?v=AyIksocsp4M&t=810s
+
 [alphaMELTS](https://magmasource.caltech.edu/alphameltys/) is an interface to the MELTS software for equilibrium mineral thermodynamics.  
 While alphaMELTS is very capable at setting up elaborate thermochemical calculations there are some cases where it would be useful to run multiple calculations in alphaMELTS and combine them into one dataset for analysis.
 For example, one alphaMELTS calculation may track the equilibrium composition of a melt as it cools and its tied to an oxygen fugacity buffer.
