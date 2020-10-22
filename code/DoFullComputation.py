@@ -56,7 +56,7 @@ if __name__ == "__main__":
 
     if DoPlotting:
         import matplotlib
-        matplotlib.use('Qt5Agg',warn=False, force=True)
+        matplotlib.use('Qt5Agg') #,warn=False, force=True)
         from matplotlib import pyplot as plt
         print("Switched to:",matplotlib.get_backend())
 

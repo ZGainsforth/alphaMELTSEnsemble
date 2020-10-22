@@ -14,6 +14,7 @@ import itertools
 import pandas as pd
 from collections import Mapping, Container 
 from sys import getsizeof
+import h5py
 
 def deep_getsizeof(o, ids): 
     """Find the memory footprint of a Python object
@@ -49,6 +50,7 @@ def deep_getsizeof(o, ids):
 
     return r      
 
+ParameterizedInputs = None
 def ReadInAllOutputs(ComputeScratchSpace, DataGrid):
     """ Goes through all the completed MELTS calculations and loads in the results to make a
     monster DataGrid.
@@ -58,6 +60,10 @@ def ReadInAllOutputs(ComputeScratchSpace, DataGrid):
         Outputs:
             DataGrid (pd.dataframe): Now populated with all the data.
     """
+
+    # Store the input parameter space for later use.
+    global ParameterizedInputs
+    ParameterizedInputs =  h5py.File(os.path.join(ComputeScratchSpace, 'ParameterizedInputs.hdf5'), 'r')
 
     # Add a column to contain the MELTS calculations.
     DataGrid['MELTS'] = None
@@ -82,7 +88,8 @@ def ExtractIndependentAxis(DataGrid, AxisPath):
     if '/' in AxisPath:
         Axis = ExtractMELTSIndependentAxis(DataGrid, AxisPath)
     else:
-        Axis = DataGrid[AxisPath].to_numpy()
+        global ParameterizedInputs
+        Axis = ParameterizedInputs['data'][AxisPath][:]
     return Axis
 
 def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
