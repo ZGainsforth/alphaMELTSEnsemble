@@ -113,7 +113,7 @@ def IndexByPath(Prefix, Path):
     PathStr = ''.join(["['"+s+"']" for s in Path.split("/")])
     return f'{Prefix}{PathStr}'
 
-def Make2DCrossSection(DataGrid, ParameterizedAxisPath, IndependentAxisPath, DependentPath, Plot=True, SavePath=None):
+def Make2DCrossSection(DataGrid, ParameterizedAxisPath, IndependentAxisPath, DependentPath, Plot=True, SavePath=None, Constraints={}):
     ParameterizedAxis = ExtractIndependentAxis(DataGrid, ParameterizedAxisPath)
     IndependentAxis = ExtractIndependentAxis(DataGrid, IndependentAxisPath)
     if ParameterizedAxis is None:
@@ -123,6 +123,18 @@ def Make2DCrossSection(DataGrid, ParameterizedAxisPath, IndependentAxisPath, Dep
         print(f'Make2DCrossSection: cannot find independent axis: {IndependentAxisPath}.  It is likely that you are trying to draw a plot for a phase that didn\'t occur in the output simulations.')
         return None, None, None
     CrossSec = np.zeros((len(ParameterizedAxis), len(IndependentAxis)))
+    # We should apply constraints here.  No constraints will be required if there is only one independent variable.
+    AllParameterizedAxes = list(DataGrid.columns)
+    AllParameterizedAxes.remove('MELTS')
+    AllParameterizedAxes.remove('DirName')
+    for c in AllParameterizedAxes:
+        # If this is an unconstrained parameter then choose a default value.
+        if c not in Constraints.keys() and c != ParameterizedAxisPath:
+            print(f'{c} not in Constraints list.  Assuming value {DataGrid[c][0]}.')
+            Constraints[c] = DataGrid[c][0]
+    # Now apply the constraints.
+    for c, v in Constraints.items():
+        DataGrid = DataGrid.loc[DataGrid[c] == v]
     for i in range(DataGrid.shape[0]):
         Parameterizedval = DataGrid.iloc[i][ParameterizedAxisPath]
         Parameterizedidx = np.where(ParameterizedAxis == Parameterizedval)[0][0]
@@ -151,6 +163,8 @@ def Make2DCrossSection(DataGrid, ParameterizedAxisPath, IndependentAxisPath, Dep
         ParameterizedLabel =  DetermineLabelName(ParameterizedAxisPath)
         IndependentLabel =  DetermineLabelName(IndependentAxisPath)
         Title = DependentPath.split('/')[-2] + ' ' + DependentPath.split('/')[-1] 
+        for c, v in Constraints.items():
+            Title += f', {c} = {v}'
         Plot2DCrossSection(CrossSec, IndependentAxis, ParameterizedAxis, IndependentLabel, ParameterizedLabel, Title)
         if SavePath is not None:
             plt.savefig(SavePath)
