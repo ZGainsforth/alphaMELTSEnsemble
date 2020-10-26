@@ -178,6 +178,22 @@ def DetermineLabelName(AxisPath):
         Label = 'f$_{O_2}$'
     if Label == 'Temperature':
         Label = 'Temperature $^{\circ}$C'
+    if Label == 'Pressure':
+        Label = 'Pressure (Bar)'
+    if Label == 'SiO2':
+        Label = 'SiO$_2$ (wt.%)'
+    if Label == 'MgO':
+        Label = 'MgO (wt.%)'
+    if Label == 'Al2O3':
+        Label = 'Al$_2$O$_3$ (wt.%)'
+    if Label == 'Fe2O3':
+        Label = 'Fe$_2$O$_3$ (wt.%)'
+    if Label == 'K2O':
+        Label = 'K$_2$O (wt.%)'
+    if Label == 'Na2O':
+        Label = 'Na$_2$O (wt.%)'
+    if Label == 'CaO':
+        Label = 'CaO (wt.%)'
     return Label
 
 def Plot2DCrossSection(CrossSec, XAxis, YAxis, XAxisLabel=None, YAxisLabel=None, Title=None, SavePath=None):
