@@ -71,7 +71,7 @@ def ReadInAllOutputs(ComputeScratchSpace, DataGrid):
     for i in range(DataGrid.shape[0]):
         print(f'Loading MELTS data from {DataGrid.iloc[i]["DirName"]}.')
         # MELTSData will be a list of dataframes -- one for each phase that exists in that MELTS computation.
-        MELTSData = dict()
+        MELTSData = {}
         # Read in the phases that exist.
         for PhaseName  in ['PhaseMassPercents', 'CombinedFitIndex', 'Olivine', 'Clinopyroxene', 'Orthopyroxene', 'Plagioclase', 'Orthoclase', 'Liquid', 'Spinel', 'AlloyLiquid', 'AlloySolid']:
             try:
@@ -103,10 +103,7 @@ def ExtractMELTSIndependentAxis(DataGrid, AxisPath):
         except KeyError as e:
             print(f'{AxisPath} not found.')
         if 'T' in locals():
-            if Axis is None:
-                Axis = T
-            else:
-                Axis = np.union1d(Axis,T)
+            Axis = T if Axis is None else np.union1d(Axis,T)
     return Axis
 
 def IndexByPath(Prefix, Path):
